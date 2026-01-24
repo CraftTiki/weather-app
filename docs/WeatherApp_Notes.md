@@ -230,24 +230,24 @@ Hero (icon + temp + feels like + alerts + precipitation summary)
     ↓
 Radar Map (static, always-on radar with timeline controls)
     ↓
-Hourly Forecast (horizontal scroll cards) ← TODO: Convert to vertical list
+Next 12 Hours (compact vertical list with horizontal temp bars)
     ↓
-7-Day Forecast
+7-Day Forecast (simple layout with inline precip)
     ↓
 Detailed Table
 ```
 
 #### Completed: Phase 2 - Hourly Timeline ✅
-- [x] Convert horizontal scroll cards to vertical list
+- [x] Convert to vertical list format
 - [x] Add condition duration bars (left edge colored bars)
 - [x] Add toggle buttons: TEMP / FEELS-LIKE / PRECIP PROB %
-- [x] Time | icon | condition text | dotted line | temperature layout
+- [x] Horizontal temperature bars (width = relative temp)
+- [x] Compact rows (36px height) - all 12 hours visible without scrolling
 
 #### Completed: Phase 3 - Weekly Forecast ✅
-- [x] Temperature pills with range visualization (low ——— high)
-- [x] Magnitude-preserved temperature bars across days
-- [x] Precipitation percentage indicator (💧) when > 0%
-- [x] Color-coded bars based on temperature range (cold/cool/mild/warm/hot)
+- [x] Simple layout: Day | Icon+💧% | Condition | High° Low°
+- [x] Precipitation % shown inline with weather icon (when > 0%)
+- [x] Clean, compact rows without floating elements
 
 ### Header Redesign (Earlier)
 - Removed gradient blue banner (was placeholder-looking)

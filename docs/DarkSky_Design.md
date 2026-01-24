@@ -228,16 +228,16 @@ Conditions:
 
 ### Phase 2: Hourly Timeline ✅
 - [x] Vertical list format (starts from NOW)
-- [x] Each row: Time | Icon | Condition text | Temperature
+- [x] Each row: Time | Icon | Horizontal temp bar | Temperature
 - [x] Condition duration bars (left edge, colored by condition type)
 - [x] Connected bars when same condition continues
 - [x] Toggle buttons: TEMP | FEELS LIKE | PRECIP %
+- [x] Compact rows (36px) - all 12 hours visible without scrolling
 
 ### Phase 3: Weekly Forecast ✅
-- [x] Temperature pills with range visualization
-- [x] Temperature magnitude preserved across days
-- [x] Precipitation percentage indicator
-- [x] Color-coded bars based on temperature range
+- [x] Simple layout: Day | Icon+💧% | Condition | High° Low°
+- [x] Precipitation % inline with weather icon (when > 0%)
+- [x] Clean, compact rows
 
 ### Phase 4: Advanced Features
 - [x] Radar/map integration (RainViewer animated radar)
