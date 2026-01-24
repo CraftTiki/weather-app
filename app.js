@@ -1712,7 +1712,7 @@ function setupHourlyToggles() {
 }
 
 /**
- * Render 7-day forecast
+ * Render 7-day forecast with temperature range bars
  */
 function render7DayForecast() {
     const data = window.weatherData;
@@ -1733,28 +1733,65 @@ function render7DayForecast() {
                 name: period.name,
                 date: period.startTime,
                 high: period.temperature,
-                low: nightPeriod?.temperature ?? '--',
+                low: nightPeriod?.temperature ?? null,
                 conditions: period.shortForecast,
                 icon: getWeatherIcon(period.shortForecast, true),
-                detailedForecast: period.detailedForecast
+                detailedForecast: period.detailedForecast,
+                precipChance: period.probabilityOfPrecipitation?.value || 0
             });
         }
     }
 
-    container.innerHTML = days.map(day => `
+    // Calculate global min/max for magnitude-preserved bars
+    const validTemps = days.flatMap(d => [d.high, d.low]).filter(t => typeof t === 'number');
+    const globalMin = Math.min(...validTemps);
+    const globalMax = Math.max(...validTemps);
+    const tempRange = globalMax - globalMin || 1; // Avoid division by zero
+
+    container.innerHTML = days.map(day => {
+        const hasValidLow = typeof day.low === 'number';
+        const low = hasValidLow ? day.low : day.high;
+        const high = day.high;
+
+        // Calculate bar position and width as percentage of global range
+        const barLeft = ((low - globalMin) / tempRange) * 100;
+        const barWidth = ((high - low) / tempRange) * 100;
+
+        // Precipitation display
+        const precipDisplay = day.precipChance > 0
+            ? `<span class="daily-precip"><span class="precip-icon">💧</span>${day.precipChance}%</span>`
+            : '';
+
+        return `
         <div class="daily-item" role="listitem">
             <div class="daily-info">
                 <div class="daily-day">${day.name}</div>
                 <div class="daily-date">${formatDate(day.date)}</div>
             </div>
             <div class="daily-icon">${day.icon}</div>
-            <div class="daily-condition">${day.conditions}</div>
-            <div class="daily-temps">
-                <span class="daily-high ${getTempClass(day.high)}">${day.high}°</span>
-                <span class="daily-low">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
+            <div class="daily-temp-range">
+                <span class="temp-low">${hasValidLow ? low + '°' : '--'}</span>
+                <div class="temp-bar-container">
+                    <div class="temp-bar-track"></div>
+                    <div class="temp-bar-fill ${getTempBarClass(low, high)}" style="left: ${barLeft}%; width: ${Math.max(barWidth, 2)}%;"></div>
+                </div>
+                <span class="temp-high ${getTempClass(high)}">${high}°</span>
             </div>
+            ${precipDisplay}
         </div>
-    `).join('');
+    `}).join('');
+}
+
+/**
+ * Get temperature bar color class based on temperature range
+ */
+function getTempBarClass(low, high) {
+    const avg = (low + high) / 2;
+    if (avg >= 90) return 'temp-bar-hot';
+    if (avg >= 75) return 'temp-bar-warm';
+    if (avg >= 55) return 'temp-bar-mild';
+    if (avg >= 35) return 'temp-bar-cool';
+    return 'temp-bar-cold';
 }
 
 /**

@@ -237,15 +237,17 @@ Hourly Forecast (horizontal scroll cards) ← TODO: Convert to vertical list
 Detailed Table
 ```
 
-#### TODO: Phase 2 - Hourly Timeline
-- [ ] Convert horizontal scroll cards to vertical list
-- [ ] Add condition duration bars (left edge colored bars)
-- [ ] Add toggle buttons: TEMP / FEELS-LIKE / PRECIP PROB %
-- [ ] Time | icon | condition text | dotted line | temperature layout
+#### Completed: Phase 2 - Hourly Timeline ✅
+- [x] Convert horizontal scroll cards to vertical list
+- [x] Add condition duration bars (left edge colored bars)
+- [x] Add toggle buttons: TEMP / FEELS-LIKE / PRECIP PROB %
+- [x] Time | icon | condition text | dotted line | temperature layout
 
-#### TODO: Phase 3 - Weekly Forecast
-- [ ] Temperature pills with range visualization
-- [ ] Magnitude-preserved temperature bars across days
+#### Completed: Phase 3 - Weekly Forecast ✅
+- [x] Temperature pills with range visualization (low ——— high)
+- [x] Magnitude-preserved temperature bars across days
+- [x] Precipitation percentage indicator (💧) when > 0%
+- [x] Color-coded bars based on temperature range (cold/cool/mild/warm/hot)
 
 ### Header Redesign (Earlier)
 - Removed gradient blue banner (was placeholder-looking)
