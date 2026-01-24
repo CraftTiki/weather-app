@@ -512,7 +512,6 @@ async function fetchWeatherData(lat, lon, signal = null) {
         if (typeof renderHourlyForecast === 'function') renderHourlyForecast();
         if (typeof render7DayForecast === 'function') render7DayForecast();
         if (typeof renderAlerts === 'function') renderAlerts();
-        if (typeof renderDetailedTable === 'function') renderDetailedTable();
 
     } catch (error) {
         if (error.name === 'AbortError' || signal?.aborted) {
@@ -1832,147 +1831,6 @@ function toggleAlertDetails(index) {
     }
 }
 
-/**
- * Render detailed weather data table
- */
-function renderDetailedTable() {
-    const data = window.weatherData;
-    if (!data?.gridpoint?.properties) return;
-
-    const container = document.querySelector('#detailed-table .table-container');
-    if (!container) return;
-
-    const props = data.gridpoint.properties;
-    const isC = props.temperature?.uom?.includes('C');
-
-    // Get time slots for next 24 hours
-    const now = new Date();
-    const times = [];
-    const tempVals = props.temperature?.values || [];
-
-    for (const item of tempVals) {
-        const start = new Date(item.validTime.split('/')[0]);
-        if (start >= now && times.length < 24) {
-            times.push(start);
-        }
-    }
-
-    if (times.length === 0) {
-        container.innerHTML = '<p>No detailed data available</p>';
-        return;
-    }
-
-    // Helper to get value at specific time
-    function getValueAtTime(property, time) {
-        if (!property?.values) return '--';
-        for (const item of property.values) {
-            const [startStr, duration] = item.validTime.split('/');
-            const start = new Date(startStr);
-            const hours = parseInt(duration.match(/PT(\d+)H/)?.[1] || '1');
-            const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
-            if (time >= start && time < end) {
-                return item.value;
-            }
-        }
-        return '--';
-    }
-
-    // Convert temperature if needed
-    function convertTemp(val) {
-        if (val === '--' || val === null) return '--';
-        if (isC) return Math.round(val * 9/5 + 32);
-        return Math.round(val);
-    }
-
-    // Convert wind direction degrees to cardinal
-    function degToCardinal(deg) {
-        if (deg === '--' || deg === null) return '--';
-        const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-                      'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-        const idx = Math.round(deg / 22.5) % 16;
-        return dirs[idx];
-    }
-
-    // Build table rows data
-    const rows = [
-        { label: 'Temperature', values: times.map(t => {
-            const val = convertTemp(getValueAtTime(props.temperature, t));
-            return { display: val !== '--' ? `${val}°` : '--', temp: val };
-        })},
-        { label: 'Feels Like', values: times.map(t => {
-            const val = convertTemp(getValueAtTime(props.apparentTemperature, t));
-            return { display: val !== '--' ? `${val}°` : '--', temp: val };
-        })},
-        { label: 'Precip Chance', values: times.map(t => {
-            const val = getValueAtTime(props.probabilityOfPrecipitation, t);
-            return { display: val !== '--' && val !== null ? `${Math.round(val)}%` : '--' };
-        })},
-        { label: 'Dewpoint', values: times.map(t => {
-            const val = convertTemp(getValueAtTime(props.dewpoint, t));
-            return { display: val !== '--' ? `${val}°` : '--' };
-        })},
-        { label: 'Humidity', values: times.map(t => {
-            const val = getValueAtTime(props.relativeHumidity, t);
-            return { display: val !== '--' ? `${Math.round(val)}%` : '--' };
-        })},
-        { label: 'Wind', values: times.map(t => {
-            const speed = getValueAtTime(props.windSpeed, t);
-            const dir = degToCardinal(getValueAtTime(props.windDirection, t));
-            if (speed === '--') return { display: '--' };
-            // Speed is in km/h, convert to mph
-            const mph = Math.round(speed * 0.621371);
-            return { display: `${dir} ${mph}` };
-        })},
-        { label: 'Gusts', values: times.map(t => {
-            const val = getValueAtTime(props.windGust, t);
-            if (val === '--' || val === null) return { display: '--' };
-            const mph = Math.round(val * 0.621371);
-            return { display: `${mph} mph` };
-        })},
-        { label: 'Cloud Cover', values: times.map(t => {
-            const val = getValueAtTime(props.skyCover, t);
-            return { display: val !== '--' ? `${Math.round(val)}%` : '--' };
-        })},
-        { label: 'QPF', values: times.map(t => {
-            const val = getValueAtTime(props.quantitativePrecipitation, t);
-            if (val === '--' || val === null || val === 0) return { display: '--' };
-            // Convert mm to inches
-            const inches = (val * 0.0393701).toFixed(2);
-            return { display: `${inches}"` };
-        })}
-    ];
-
-    // Build HTML table
-    const headerCells = times.map(t =>
-        `<th>${t.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })}</th>`
-    ).join('');
-
-    const bodyRows = rows.map(row => {
-        const cells = row.values.map(v => {
-            let className = '';
-            if (v.temp !== undefined && v.temp !== '--') {
-                className = getTempClass(v.temp);
-            }
-            return `<td class="${className}">${v.display}</td>`;
-        }).join('');
-        return `<tr><td class="row-label">${row.label}</td>${cells}</tr>`;
-    }).join('');
-
-    container.innerHTML = `
-        <table class="weather-table">
-            <thead>
-                <tr>
-                    <th></th>
-                    ${headerCells}
-                </tr>
-            </thead>
-            <tbody>
-                ${bodyRows}
-            </tbody>
-        </table>
-    `;
-}
-
 // =============================================================================
 // MAP FUNCTIONS
 // =============================================================================
@@ -2497,7 +2355,6 @@ window.WeatherBuster = {
     showAlertModal,
     toggleAlertDetails,
     toggleAlertExpand,
-    renderDetailedTable,
     // Map functions
     initializeMap,
     handleMapClick,

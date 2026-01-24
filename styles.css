@@ -150,8 +150,7 @@ input {
 [data-theme="dark"] .current-conditions-card,
 [data-theme="dark"] .hourly-timeline-section,
 [data-theme="dark"] .hourly-forecast-section,
-[data-theme="dark"] .weekly-forecast-section,
-[data-theme="dark"] .detailed-table-section {
+[data-theme="dark"] .weekly-forecast-section {
   background-color: var(--bg-card);
 }
 
@@ -163,39 +162,6 @@ input {
 [data-theme="dark"] .hourly-item:hover,
 [data-theme="dark"] .daily-item:hover {
   background-color: #3d3d3d;
-}
-
-[data-theme="dark"] .weather-table th {
-  background-color: var(--header-gradient-start);
-}
-
-[data-theme="dark"] .weather-table tbody tr:nth-child(odd) {
-  background-color: var(--bg-card-alt);
-}
-
-[data-theme="dark"] .weather-table tbody tr:nth-child(even) {
-  background-color: var(--bg-card);
-}
-
-[data-theme="dark"] .weather-table tbody tr:hover {
-  background-color: #3d3d3d;
-}
-
-[data-theme="dark"] .weather-table tbody tr:nth-child(odd) td:first-child {
-  background-color: var(--bg-card-alt);
-}
-
-[data-theme="dark"] .weather-table tbody tr:nth-child(even) td:first-child {
-  background-color: var(--bg-card);
-}
-
-[data-theme="dark"] .weather-table tbody tr:hover td:first-child {
-  background-color: #3d3d3d;
-}
-
-[data-theme="dark"] .weather-table td,
-[data-theme="dark"] .weather-table th {
-  border-bottom-color: #404040;
 }
 
 [data-theme="dark"] .row-label {
@@ -955,8 +921,7 @@ input {
 
 .hourly-timeline-section,
 .hourly-forecast-section,
-.weekly-forecast-section,
-.detailed-table-section {
+.weekly-forecast-section {
   background-color: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -1592,77 +1557,7 @@ input {
 }
 
 /* ==========================================================================
-   8. Detailed Table
-   ========================================================================== */
-
-.table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.weather-table {
-  width: 100%;
-  min-width: 600px;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.weather-table th,
-.weather-table td {
-  padding: var(--spacing-md);
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.weather-table th {
-  background-color: var(--primary-dark);
-  color: var(--text-white);
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.weather-table th:first-child,
-.weather-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 5;
-  background-color: inherit;
-}
-
-.weather-table th:first-child {
-  z-index: 15;
-}
-
-.weather-table tbody tr:nth-child(odd) {
-  background-color: #f8f9fa;
-}
-
-.weather-table tbody tr:nth-child(even) {
-  background-color: var(--bg-card);
-}
-
-.weather-table tbody tr:hover {
-  background-color: #e3f2fd;
-}
-
-.weather-table tbody tr:nth-child(odd) td:first-child {
-  background-color: #f8f9fa;
-}
-
-.weather-table tbody tr:nth-child(even) td:first-child {
-  background-color: var(--bg-card);
-}
-
-.weather-table tbody tr:hover td:first-child {
-  background-color: #e3f2fd;
-}
-
-/* ==========================================================================
-   9. Loading Spinner
+   8. Loading Spinner
    ========================================================================== */
 
 .loading-container,
@@ -1877,8 +1772,7 @@ input {
   /* Hourly forecast mobile */
   .hourly-timeline-section,
   .hourly-forecast-section,
-  .weekly-forecast-section,
-  .detailed-table-section {
+  .weekly-forecast-section {
     padding: var(--spacing-md);
     margin-bottom: var(--spacing-md);
     border-radius: var(--radius-md);
@@ -1939,16 +1833,6 @@ input {
     font-size: 0.9rem;
   }
 
-
-  /* Table mobile */
-  .weather-table {
-    font-size: 0.8rem;
-  }
-
-  .weather-table th,
-  .weather-table td {
-    padding: var(--spacing-sm);
-  }
 
   /* Footer mobile */
   .app-footer {
