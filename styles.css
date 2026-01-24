@@ -978,13 +978,13 @@ input {
 /* Individual hourly row */
 .hourly-row {
   display: grid;
-  grid-template-columns: 6px 55px 28px 1fr;
+  grid-template-columns: 4px 55px 24px 1fr;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 0;
+  gap: var(--spacing-xs);
+  padding: 6px var(--spacing-sm) 6px 0;
   border-bottom: 1px solid rgba(128, 128, 128, 0.1);
   transition: background-color 0.15s ease;
-  min-height: 80px;
+  min-height: 36px;
 }
 
 .hourly-row:last-child {
@@ -997,10 +997,10 @@ input {
 
 /* Condition duration bar (left edge) */
 .hourly-duration-bar {
-  width: 6px;
+  width: 4px;
   height: 100%;
-  min-height: 80px;
-  border-radius: 3px;
+  min-height: 36px;
+  border-radius: 2px;
   position: relative;
   transition: background-color 0.2s ease;
 }
@@ -1049,7 +1049,7 @@ input {
 
 /* Time column */
 .hourly-row-time {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-secondary);
   text-align: right;
@@ -1063,7 +1063,7 @@ input {
 
 /* Icon column */
 .hourly-row-icon {
-  font-size: 1.25rem;
+  font-size: 1rem;
   text-align: center;
   line-height: 1;
 }
@@ -1073,61 +1073,46 @@ input {
   display: none; /* Hidden - condition shown via icon and duration bar */
 }
 
-/* Temperature pill container - now holds the curve area */
+/* Temperature pill container */
 .hourly-row-pill-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 70px;
-  position: relative;
+  gap: var(--spacing-sm);
+  flex: 1;
 }
 
-/* Temperature pill track (background) - Now a vertical curve area */
+/* Temperature pill track (background bar) */
 .hourly-pill-track {
   flex: 1;
-  height: 60px;
-  background-color: transparent;
+  height: 8px;
+  background-color: rgba(128, 128, 128, 0.1);
   border-radius: 4px;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 [data-theme="dark"] .hourly-pill-track {
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Temperature pill (now a positioned dot on the curve) */
+/* Temperature pill (the filled bar) */
 .hourly-pill {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  transition: bottom 0.3s ease, background-color 0.3s ease;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  min-width: 4px;
 }
 
-/* Value positioned along the curve */
+/* Value label to the right of the bar */
 .hourly-row-value {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  transition: bottom 0.3s ease;
-}
-
-/* Curve SVG container */
-.hourly-curve-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: visible;
+  min-width: 40px;
+  text-align: right;
 }
 
 .hourly-curve-svg {
@@ -1160,51 +1145,42 @@ input {
   opacity: 0.2;
 }
 
-/* Pill (dot) colors based on temperature */
+/* Pill colors based on temperature */
 .hourly-pill.temp-cold {
-  background: #2196f3;
-  box-shadow: 0 0 6px rgba(33, 150, 243, 0.5);
+  background: linear-gradient(90deg, #2196f3, #64b5f6);
 }
 
 .hourly-pill.temp-cool {
-  background: #64b5f6;
-  box-shadow: 0 0 6px rgba(100, 181, 246, 0.5);
+  background: linear-gradient(90deg, #64b5f6, #81d4fa);
 }
 
 .hourly-pill.temp-mild {
-  background: #4caf50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+  background: linear-gradient(90deg, #4caf50, #81c784);
 }
 
 .hourly-pill.temp-warm {
-  background: #ff9800;
-  box-shadow: 0 0 6px rgba(255, 152, 0, 0.5);
+  background: linear-gradient(90deg, #ff9800, #ffb74d);
 }
 
 .hourly-pill.temp-hot {
-  background: #f44336;
-  box-shadow: 0 0 6px rgba(244, 67, 54, 0.5);
+  background: linear-gradient(90deg, #f44336, #e57373);
 }
 
-/* Precip dot colors */
+/* Precip bar colors */
 .hourly-pill.precip-high {
-  background: #1e40af;
-  box-shadow: 0 0 6px rgba(30, 64, 175, 0.5);
+  background: linear-gradient(90deg, #1e40af, #3b82f6);
 }
 
 .hourly-pill.precip-medium {
-  background: #3b82f6;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
 }
 
 .hourly-pill.precip-low {
-  background: #60a5fa;
-  box-shadow: 0 0 6px rgba(96, 165, 250, 0.5);
+  background: linear-gradient(90deg, #60a5fa, #93c5fd);
 }
 
 .hourly-pill.precip-none {
-  background: rgba(128, 128, 128, 0.4);
-  box-shadow: none;
+  background: rgba(128, 128, 128, 0.3);
 }
 
 /* Value label on the pill - removed, now handled by curve positioning above */
@@ -1300,15 +1276,15 @@ input {
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .hourly-row {
-    grid-template-columns: 5px 45px 24px 1fr;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-xs) var(--spacing-xs) var(--spacing-xs) 0;
-    min-height: 60px;
+    grid-template-columns: 4px 40px 20px 1fr;
+    gap: 4px;
+    padding: 4px var(--spacing-xs) 4px 0;
+    min-height: 32px;
   }
 
   .hourly-duration-bar {
-    width: 5px;
-    min-height: 60px;
+    width: 4px;
+    min-height: 32px;
   }
 
   .hourly-row-time {
@@ -1319,12 +1295,8 @@ input {
     font-size: 1rem;
   }
 
-  .hourly-row-pill-container {
-    height: 55px;
-  }
-
   .hourly-pill-track {
-    height: 55px;
+    height: 6px;
   }
 
   .hourly-row-value {
