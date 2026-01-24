@@ -1711,29 +1711,282 @@ function render7DayForecast() {
         }
     }
 
-    container.innerHTML = days.map(day => {
+    container.innerHTML = days.map((day, index) => {
         // Show precip inline with icon if > 0%
         const precipInline = day.precipChance > 0
             ? `<span class="daily-precip-inline">💧${day.precipChance}%</span>`
             : '';
 
         return `
-        <div class="daily-item" role="listitem">
-            <div class="daily-info">
-                <div class="daily-day">${day.name}</div>
-                <div class="daily-date">${formatDate(day.date)}</div>
+        <div class="daily-item" role="listitem" data-day-index="${index}" data-day-date="${day.date}">
+            <div class="daily-item-header">
+                <div class="daily-info">
+                    <div class="daily-day">${day.name}</div>
+                    <div class="daily-date">${formatDate(day.date)}</div>
+                </div>
+                <div class="daily-icon-group">
+                    <span class="daily-icon">${day.icon}</span>
+                    ${precipInline}
+                </div>
+                <div class="daily-condition">${day.conditions}</div>
+                <div class="daily-temps">
+                    <span class="daily-high ${getTempClass(day.high)}">${day.high}°</span>
+                    <span class="daily-low">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
+                    <svg class="expand-indicator" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
             </div>
-            <div class="daily-icon-group">
-                <span class="daily-icon">${day.icon}</span>
-                ${precipInline}
-            </div>
-            <div class="daily-condition">${day.conditions}</div>
-            <div class="daily-temps">
-                <span class="daily-high ${getTempClass(day.high)}">${day.high}°</span>
-                <span class="daily-low">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
+            <div class="daily-expanded-chart" id="daily-chart-${index}">
+                <div class="daily-chart-title">Hourly Breakdown</div>
+                <div class="daily-chart-timeline" role="list"></div>
+                <div class="daily-chart-toggles" role="tablist">
+                    <button type="button" class="hourly-toggle active" data-view="temp" data-day="${index}" role="tab" aria-selected="true">TEMP</button>
+                    <button type="button" class="hourly-toggle" data-view="feels" data-day="${index}" role="tab" aria-selected="false">FEELS</button>
+                    <button type="button" class="hourly-toggle" data-view="precip" data-day="${index}" role="tab" aria-selected="false">PRECIP</button>
+                </div>
             </div>
         </div>
     `}).join('');
+
+    // Set up click handlers for expanding/collapsing
+    setupDailyItemExpansion(container);
+}
+
+/**
+ * Track expanded day's view mode (separate from main hourly view)
+ */
+const dailyViewModes = {};
+
+/**
+ * Set up click handlers for daily item expansion
+ * @param {HTMLElement} container - The weekly grid container
+ */
+function setupDailyItemExpansion(container) {
+    const dailyItems = container.querySelectorAll('.daily-item');
+
+    dailyItems.forEach(item => {
+        const header = item.querySelector('.daily-item-header');
+        const dayIndex = parseInt(item.dataset.dayIndex);
+
+        // Initialize view mode for this day
+        dailyViewModes[dayIndex] = 'temp';
+
+        // Click on header to expand/collapse
+        header.addEventListener('click', () => {
+            const wasExpanded = item.classList.contains('expanded');
+
+            // Collapse all other items
+            dailyItems.forEach(other => {
+                if (other !== item) {
+                    other.classList.remove('expanded');
+                }
+            });
+
+            // Toggle this item
+            item.classList.toggle('expanded');
+
+            // If expanding, render the chart
+            if (!wasExpanded) {
+                renderDayHourlyChart(dayIndex, item.dataset.dayDate);
+            }
+        });
+
+        // Set up toggle buttons for this day's chart
+        const toggles = item.querySelectorAll('.daily-chart-toggles .hourly-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent bubbling to header
+
+                // Update active state within this day's toggles
+                toggles.forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                toggle.classList.add('active');
+                toggle.setAttribute('aria-selected', 'true');
+
+                // Update view mode and re-render
+                dailyViewModes[dayIndex] = toggle.dataset.view;
+                renderDayHourlyChart(dayIndex, item.dataset.dayDate);
+            });
+        });
+    });
+}
+
+/**
+ * Render hourly chart for a specific day
+ * @param {number} dayIndex - Index of the day (0-6)
+ * @param {string} dayDateStr - ISO date string for the day
+ */
+function renderDayHourlyChart(dayIndex, dayDateStr) {
+    const data = window.weatherData;
+    if (!data?.gridpoint?.properties?.temperature?.values) return;
+
+    const chartContainer = document.querySelector(`#daily-chart-${dayIndex} .daily-chart-timeline`);
+    if (!chartContainer) return;
+
+    const props = data.gridpoint.properties;
+    const temps = props.temperature.values;
+    const appTemps = props.apparentTemperature?.values || [];
+    const precipProbs = props.probabilityOfPrecipitation?.values || [];
+    const weather = props.weather?.values || [];
+
+    // Check if temperatures are in Celsius (NWS returns C)
+    const tempUnit = props.temperature.uom;
+    const isC = tempUnit?.includes('degC') || tempUnit?.includes('celsius');
+
+    // Parse the day's date to get start and end of that day
+    const dayDate = new Date(dayDateStr);
+    const dayStart = new Date(dayDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayDate);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // Collect hourly data for this specific day
+    const hourlyData = [];
+
+    for (const item of temps) {
+        const [startStr, durationStr] = item.validTime.split('/');
+        const start = new Date(startStr);
+
+        // Only include hours for this specific day
+        if (start >= dayStart && start <= dayEnd) {
+            let temp = item.value;
+            if (isC) temp = temp * 9 / 5 + 32;
+            temp = Math.round(temp);
+
+            // Find corresponding apparent temperature
+            let feelsLike = null;
+            for (const at of appTemps) {
+                const atStart = new Date(at.validTime.split('/')[0]);
+                if (atStart.getTime() === start.getTime()) {
+                    feelsLike = at.value;
+                    if (isC) feelsLike = feelsLike * 9 / 5 + 32;
+                    feelsLike = Math.round(feelsLike);
+                    break;
+                }
+            }
+
+            // Find corresponding precipitation probability
+            let precipProb = 0;
+            for (const pp of precipProbs) {
+                const ppStart = new Date(pp.validTime.split('/')[0]);
+                if (ppStart.getTime() === start.getTime()) {
+                    precipProb = pp.value || 0;
+                    break;
+                }
+            }
+
+            hourlyData.push({
+                time: start,
+                temp,
+                feelsLike: feelsLike !== null ? feelsLike : temp,
+                precipProb,
+                icon: getHourlyWeatherIcon(start, props),
+                condition: getConditionText(start, props),
+                category: getConditionCategory(start, props),
+                isNow: false
+            });
+        }
+    }
+
+    // If no data for this day, show a message
+    if (hourlyData.length === 0) {
+        chartContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-light);">Detailed hourly data not available for this day</div>';
+        return;
+    }
+
+    // Calculate condition spans
+    const conditionSpans = calculateConditionSpans(hourlyData);
+
+    // Render the chart using the day's view mode
+    renderDayChartTimeline(chartContainer, hourlyData, conditionSpans, dailyViewModes[dayIndex]);
+}
+
+/**
+ * Render the day's hourly chart timeline (similar to main hourly timeline)
+ * @param {HTMLElement} container - Container element
+ * @param {Array} hourlyData - Hourly data array for the day
+ * @param {Array} conditionSpans - Condition span types
+ * @param {string} viewMode - Current view mode (temp, feels, precip)
+ */
+function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode) {
+    // Calculate min/max for pill sizing based on view mode
+    let minVal, maxVal, values;
+
+    switch (viewMode) {
+        case 'feels':
+            values = hourlyData.map(h => h.feelsLike);
+            break;
+        case 'precip':
+            values = hourlyData.map(h => h.precipProb);
+            minVal = 0;
+            maxVal = 100;
+            break;
+        case 'temp':
+        default:
+            values = hourlyData.map(h => h.temp);
+            break;
+    }
+
+    // For temp/feels, use actual range with some padding
+    if (viewMode !== 'precip') {
+        const actualMin = Math.min(...values);
+        const actualMax = Math.max(...values);
+        const range = actualMax - actualMin;
+        minVal = actualMin - Math.max(5, range * 0.2);
+        maxVal = actualMax + Math.max(5, range * 0.2);
+    }
+
+    const range = maxVal - minVal;
+
+    container.innerHTML = hourlyData.map((hour, index) => {
+        const timeLabel = formatTime(hour.time.toISOString());
+        const spanClass = `condition-${conditionSpans[index]}`;
+
+        // Get value and pill width based on current view mode
+        let displayValue, currentVal, pillClass;
+
+        switch (viewMode) {
+            case 'feels':
+                currentVal = hour.feelsLike;
+                displayValue = `${hour.feelsLike}°`;
+                pillClass = getTempClass(hour.feelsLike);
+                break;
+            case 'precip':
+                currentVal = hour.precipProb;
+                displayValue = `${hour.precipProb}%`;
+                if (hour.precipProb >= 70) pillClass = 'precip-high';
+                else if (hour.precipProb >= 40) pillClass = 'precip-medium';
+                else if (hour.precipProb > 0) pillClass = 'precip-low';
+                else pillClass = 'precip-none';
+                break;
+            case 'temp':
+            default:
+                currentVal = hour.temp;
+                displayValue = `${hour.temp}°`;
+                pillClass = getTempClass(hour.temp);
+                break;
+        }
+
+        // Calculate pill width as percentage of range
+        const pillWidth = range > 0 ? Math.round(((currentVal - minVal) / range) * 100) : 50;
+
+        return `
+            <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
+                <div class="hourly-duration-bar condition-${hour.category}" aria-hidden="true"></div>
+                <div class="hourly-row-time">${timeLabel}</div>
+                <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
+                <div class="hourly-row-pill-container">
+                    <div class="hourly-pill-track">
+                        <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
+                    </div>
+                    <div class="hourly-row-value">${displayValue}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 /**
@@ -2715,6 +2968,9 @@ window.WeatherBuster = {
     calculateConditionSpans,
     setupHourlyToggles,
     render7DayForecast,
+    setupDailyItemExpansion,
+    renderDayHourlyChart,
+    renderDayChartTimeline,
     renderAlerts,
     showAlertModal,
     toggleAlertDetails,

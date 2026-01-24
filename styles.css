@@ -1357,14 +1357,9 @@ input {
 }
 
 .daily-item {
-  display: grid;
-  grid-template-columns: 120px auto 1fr auto;
-  align-items: center;
-  gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: #f8f9fa;
   border-radius: var(--radius-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Icon + precipitation inline group */
@@ -1420,6 +1415,90 @@ input {
 
 .daily-low {
   color: var(--text-light);
+}
+
+/* Expandable daily item */
+.daily-item {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.daily-item-header {
+  display: grid;
+  grid-template-columns: 120px auto 1fr auto;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.daily-item.expanded {
+  background-color: var(--bg-card);
+  box-shadow: var(--shadow-md);
+}
+
+.daily-item .expand-indicator {
+  color: var(--text-light);
+  transition: transform 0.2s ease;
+  margin-left: var(--spacing-xs);
+}
+
+.daily-item.expanded .expand-indicator {
+  transform: rotate(180deg);
+}
+
+/* Expanded hourly chart container */
+.daily-expanded-chart {
+  display: none;
+  padding: var(--spacing-md) 0 0 0;
+  margin-top: var(--spacing-md);
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.daily-item.expanded .daily-expanded-chart {
+  display: block;
+}
+
+.daily-chart-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Daily chart timeline (reuses hourly timeline styles) */
+.daily-chart-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.daily-chart-timeline .hourly-row {
+  min-height: 32px;
+  padding: 4px var(--spacing-sm) 4px 0;
+}
+
+.daily-chart-timeline .hourly-duration-bar {
+  min-height: 32px;
+}
+
+/* Daily chart toggles */
+.daily-chart-toggles {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .daily-expanded-chart {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .daily-chart-toggles {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Temperature Range Bar (7-Day Forecast) */
@@ -1798,8 +1877,11 @@ input {
 
   /* Daily forecast mobile */
   .daily-item {
-    grid-template-columns: 1fr auto auto;
     padding: var(--spacing-sm);
+  }
+
+  .daily-item-header {
+    grid-template-columns: 1fr auto auto;
     gap: var(--spacing-sm);
   }
 
@@ -1925,7 +2007,7 @@ input {
     grid-template-columns: repeat(1, 1fr);
   }
 
-  .daily-item {
+  .daily-item-header {
     grid-template-columns: 100px auto 1fr auto;
   }
 
@@ -1989,7 +2071,7 @@ input {
     grid-template-columns: repeat(1, 1fr);
   }
 
-  .daily-item {
+  .daily-item-header {
     grid-template-columns: 120px auto 1fr auto;
   }
 
@@ -2015,8 +2097,11 @@ input {
   }
 
   .daily-item {
-    grid-template-columns: 150px auto 1fr auto;
     padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .daily-item-header {
+    grid-template-columns: 150px auto 1fr auto;
   }
 }
 
