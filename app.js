@@ -77,6 +77,11 @@ let currentFrameIndex = 0;
 let radarAnimationInterval = null;
 let isRadarPlaying = false;
 
+// Fullscreen radar state
+let fullscreenRadarMap = null;
+let fullscreenRadarLayers = [];
+let isFullscreenRadarOpen = false;
+
 // =============================================================================
 // DOM ELEMENTS
 // =============================================================================
@@ -2301,6 +2306,367 @@ function setupRadarControls() {
             showRadarFrame(value);
         });
     }
+
+    // Set up click handler for map section to open fullscreen
+    const mapSection = document.querySelector('.map-section-inline');
+    if (mapSection) {
+        mapSection.addEventListener('click', (e) => {
+            // Don't open fullscreen if clicking on controls
+            if (e.target.closest('.radar-controls')) return;
+            openFullscreenRadar();
+        });
+    }
+
+    // Set up fullscreen radar controls
+    setupFullscreenRadarControls();
+}
+
+// =============================================================================
+// FULLSCREEN RADAR FUNCTIONS
+// =============================================================================
+
+/**
+ * Open fullscreen radar view
+ */
+function openFullscreenRadar() {
+    const modal = document.getElementById('fullscreen-radar');
+    if (!modal) return;
+
+    // Pause inline radar animation
+    pauseRadarAnimation();
+
+    // Show modal
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    isFullscreenRadarOpen = true;
+
+    // Initialize fullscreen map if not already done
+    if (!fullscreenRadarMap) {
+        initializeFullscreenRadarMap();
+    } else {
+        // Sync map position with main map
+        if (weatherMap) {
+            const center = weatherMap.getCenter();
+            const zoom = weatherMap.getZoom();
+            fullscreenRadarMap.setView(center, zoom);
+        }
+        fullscreenRadarMap.invalidateSize();
+    }
+
+    // Sync current frame
+    showFullscreenRadarFrame(currentFrameIndex);
+    updateFullscreenRadarControls();
+
+    console.log('[WeatherBuster] Fullscreen radar opened');
+}
+
+/**
+ * Close fullscreen radar view
+ */
+function closeFullscreenRadar() {
+    const modal = document.getElementById('fullscreen-radar');
+    if (!modal) return;
+
+    // Pause fullscreen animation
+    pauseFullscreenRadarAnimation();
+
+    // Hide modal
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    isFullscreenRadarOpen = false;
+
+    // Sync position back to main map
+    if (fullscreenRadarMap && weatherMap) {
+        const center = fullscreenRadarMap.getCenter();
+        const zoom = fullscreenRadarMap.getZoom();
+        weatherMap.setView(center, zoom);
+    }
+
+    // Sync frame index back to main radar
+    showRadarFrame(currentFrameIndex);
+
+    console.log('[WeatherBuster] Fullscreen radar closed');
+}
+
+/**
+ * Initialize the fullscreen radar map
+ */
+function initializeFullscreenRadarMap() {
+    const mapContainer = document.getElementById('fullscreen-radar-map');
+    if (!mapContainer || typeof L === 'undefined') return;
+
+    // Get current position from main map
+    let center = [39.8283, -98.5795];
+    let zoom = 6;
+
+    if (weatherMap) {
+        center = weatherMap.getCenter();
+        zoom = weatherMap.getZoom();
+    } else if (currentLocation) {
+        center = [currentLocation.latitude, currentLocation.longitude];
+        zoom = 8;
+    }
+
+    // Create fullscreen map with full interactivity
+    fullscreenRadarMap = L.map('fullscreen-radar-map', {
+        center: center,
+        zoom: zoom,
+        zoomControl: true,
+        scrollWheelZoom: true,
+        dragging: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        boxZoom: true,
+        keyboard: true
+    });
+
+    // Add base tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 18
+    }).addTo(fullscreenRadarMap);
+
+    // Create radar layers for fullscreen map
+    createFullscreenRadarLayers();
+
+    // Add location marker if we have a location
+    if (currentLocation) {
+        const customIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="
+                background-color: #1e88e5;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            "></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        L.marker([currentLocation.latitude, currentLocation.longitude], { icon: customIcon })
+            .addTo(fullscreenRadarMap);
+    }
+
+    console.log('[WeatherBuster] Fullscreen radar map initialized');
+}
+
+/**
+ * Create radar layers for fullscreen map
+ */
+function createFullscreenRadarLayers() {
+    // Clear existing layers
+    fullscreenRadarLayers.forEach(layer => {
+        if (fullscreenRadarMap && fullscreenRadarMap.hasLayer(layer)) {
+            fullscreenRadarMap.removeLayer(layer);
+        }
+    });
+    fullscreenRadarLayers = [];
+
+    // Create a layer for each frame
+    radarFrames.forEach((frame) => {
+        const layer = L.tileLayer(RAINVIEWER_TILE_URL.replace('{path}', frame.path), {
+            opacity: 0,
+            attribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
+            maxZoom: 18,
+            zIndex: 100
+        });
+        fullscreenRadarLayers.push(layer);
+    });
+}
+
+/**
+ * Show a specific radar frame on fullscreen map
+ * @param {number} index - Frame index to show
+ */
+function showFullscreenRadarFrame(index) {
+    if (!isFullscreenRadarOpen || fullscreenRadarLayers.length === 0) return;
+
+    // Clamp index
+    index = Math.max(0, Math.min(index, fullscreenRadarLayers.length - 1));
+    currentFrameIndex = index;
+
+    // Hide all layers, show selected one
+    fullscreenRadarLayers.forEach((layer, i) => {
+        if (i === index) {
+            if (!fullscreenRadarMap.hasLayer(layer)) {
+                layer.addTo(fullscreenRadarMap);
+            }
+            layer.setOpacity(0.6);
+        } else {
+            layer.setOpacity(0);
+        }
+    });
+
+    // Update controls
+    updateFullscreenRadarControls();
+
+    // Also update main radar controls to stay in sync
+    updateRadarControls();
+}
+
+/**
+ * Update fullscreen radar control UI
+ */
+function updateFullscreenRadarControls() {
+    const slider = document.getElementById('fullscreen-radar-slider');
+    const timestamp = document.getElementById('fullscreen-radar-timestamp');
+    const playBtn = document.getElementById('fullscreen-radar-play-btn');
+
+    if (slider) {
+        slider.value = currentFrameIndex;
+        slider.max = radarFrames.length - 1;
+    }
+
+    if (timestamp && radarFrames[currentFrameIndex]) {
+        const frame = radarFrames[currentFrameIndex];
+        const date = new Date(frame.time * 1000);
+        const timeStr = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const isPast = currentFrameIndex < radarFrames.length - 3;
+        const label = isPast ? '' : ' (Forecast)';
+        timestamp.textContent = timeStr + label;
+    }
+
+    if (playBtn) {
+        playBtn.classList.toggle('playing', isFullscreenRadarPlaying);
+        playBtn.setAttribute('aria-label', isFullscreenRadarPlaying ? 'Pause radar animation' : 'Play radar animation');
+    }
+}
+
+// Fullscreen radar animation state
+let fullscreenRadarAnimationInterval = null;
+let isFullscreenRadarPlaying = false;
+
+/**
+ * Play fullscreen radar animation
+ */
+function playFullscreenRadarAnimation() {
+    if (fullscreenRadarAnimationInterval) {
+        clearInterval(fullscreenRadarAnimationInterval);
+    }
+
+    isFullscreenRadarPlaying = true;
+    updateFullscreenRadarControls();
+
+    fullscreenRadarAnimationInterval = setInterval(() => {
+        let nextIndex = currentFrameIndex + 1;
+        if (nextIndex >= radarFrames.length) {
+            nextIndex = 0;
+        }
+        showFullscreenRadarFrame(nextIndex);
+    }, 500);
+}
+
+/**
+ * Pause fullscreen radar animation
+ */
+function pauseFullscreenRadarAnimation() {
+    if (fullscreenRadarAnimationInterval) {
+        clearInterval(fullscreenRadarAnimationInterval);
+        fullscreenRadarAnimationInterval = null;
+    }
+    isFullscreenRadarPlaying = false;
+    updateFullscreenRadarControls();
+}
+
+/**
+ * Toggle fullscreen radar animation
+ */
+function toggleFullscreenRadarAnimation() {
+    if (isFullscreenRadarPlaying) {
+        pauseFullscreenRadarAnimation();
+    } else {
+        playFullscreenRadarAnimation();
+    }
+}
+
+/**
+ * Set up fullscreen radar control event listeners
+ */
+function setupFullscreenRadarControls() {
+    const closeBtn = document.getElementById('fullscreen-radar-close');
+    const playBtn = document.getElementById('fullscreen-radar-play-btn');
+    const slider = document.getElementById('fullscreen-radar-slider');
+    let isDragging = false;
+    let lastFrameTime = 0;
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeFullscreenRadar);
+    }
+
+    if (playBtn) {
+        playBtn.addEventListener('click', toggleFullscreenRadarAnimation);
+    }
+
+    if (slider) {
+        const updateFrame = (value) => {
+            const now = performance.now();
+            if (now - lastFrameTime > 33) {
+                showFullscreenRadarFrame(parseInt(value, 10));
+                lastFrameTime = now;
+            }
+        };
+
+        slider.addEventListener('mousedown', () => {
+            isDragging = true;
+            pauseFullscreenRadarAnimation();
+        });
+
+        slider.addEventListener('touchstart', () => {
+            isDragging = true;
+            pauseFullscreenRadarAnimation();
+        }, { passive: true });
+
+        slider.addEventListener('input', (e) => {
+            if (!isDragging) {
+                pauseFullscreenRadarAnimation();
+            }
+            updateFrame(e.target.value);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging && isFullscreenRadarOpen) {
+                isDragging = false;
+                showFullscreenRadarFrame(parseInt(slider.value, 10));
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            if (isDragging && isFullscreenRadarOpen) {
+                isDragging = false;
+                showFullscreenRadarFrame(parseInt(slider.value, 10));
+            }
+        });
+
+        slider.addEventListener('click', (e) => {
+            if (isDragging) return;
+
+            const rect = slider.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            const max = parseInt(slider.max, 10) || 14;
+            const min = parseInt(slider.min, 10) || 0;
+            const value = Math.round(min + percent * (max - min));
+
+            slider.value = value;
+            pauseFullscreenRadarAnimation();
+            showFullscreenRadarFrame(value);
+        });
+    }
+
+    // Close fullscreen radar with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isFullscreenRadarOpen) {
+            closeFullscreenRadar();
+        }
+    });
 }
 
 // =============================================================================
@@ -2374,5 +2740,10 @@ window.WeatherBuster = {
     initializeTheme,
     setDarkMode,
     openSettings,
-    closeSettings
+    closeSettings,
+    // Fullscreen radar functions
+    openFullscreenRadar,
+    closeFullscreenRadar,
+    toggleFullscreenRadarAnimation,
+    showFullscreenRadarFrame
 };

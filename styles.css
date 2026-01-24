@@ -2620,6 +2620,175 @@ input {
   }
 }
 
+/* ==========================================================================
+   Fullscreen Radar Modal
+   ========================================================================== */
+
+.fullscreen-radar-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-main);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.fullscreen-radar-modal.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.fullscreen-radar-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--spacing-md);
+  padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+  z-index: 2001;
+  pointer-events: none;
+}
+
+.fullscreen-radar-close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.fullscreen-radar-close:hover {
+  background-color: var(--bg-card-alt);
+  transform: scale(1.05);
+}
+
+.fullscreen-radar-close:active {
+  transform: scale(0.95);
+}
+
+.fullscreen-radar-map {
+  flex: 1;
+  width: 100%;
+  z-index: 1;
+  background-color: #2d2d2d;
+}
+
+.fullscreen-radar-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+  background: var(--bg-card);
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  z-index: 2001;
+}
+
+/* Fullscreen radar controls responsive */
+@media (max-width: 480px) {
+  .fullscreen-radar-controls {
+    padding: var(--spacing-sm) var(--spacing-md);
+    padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+    gap: var(--spacing-sm);
+  }
+
+  .fullscreen-radar-header {
+    padding: var(--spacing-sm);
+    padding-top: calc(var(--spacing-sm) + env(safe-area-inset-top));
+  }
+
+  .fullscreen-radar-close {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Dark mode fullscreen radar */
+[data-theme="dark"] .fullscreen-radar-modal {
+  background-color: var(--bg-main);
+}
+
+[data-theme="dark"] .fullscreen-radar-close {
+  background-color: var(--bg-card);
+}
+
+[data-theme="dark"] .fullscreen-radar-close:hover {
+  background-color: var(--bg-card-alt);
+}
+
+[data-theme="dark"] .fullscreen-radar-controls {
+  background: var(--bg-card);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Clickable radar map indicator */
+.map-section-inline {
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+}
+
+.map-section-inline::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  transition: background 0.2s ease;
+  pointer-events: none;
+  border-radius: var(--radius-lg);
+}
+
+.map-section-inline:hover::after {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .map-section-inline:hover::after {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Expand icon hint on radar */
+.radar-expand-hint {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.map-section-inline:hover .radar-expand-hint {
+  opacity: 1;
+}
+
 /* Responsive map */
 @media (max-width: 767px) {
   .weather-map {
