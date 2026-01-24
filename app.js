@@ -1570,7 +1570,7 @@ function calculateConditionSpans(hourlyData) {
  * @param {Array} conditionSpans - Condition span types
  */
 function renderHourlyTimeline(container, hourlyData, conditionSpans) {
-    // Calculate min/max for pill sizing based on current view mode
+    // Calculate min/max for positioning based on current view mode
     let minVal, maxVal, values;
 
     switch (hourlyViewMode) {
@@ -1593,44 +1593,79 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
         const actualMin = Math.min(...values);
         const actualMax = Math.max(...values);
         const range = actualMax - actualMin;
-        // Add padding so bars don't start at 0% or end at 100%
-        minVal = actualMin - Math.max(5, range * 0.2);
-        maxVal = actualMax + Math.max(5, range * 0.2);
+        // Add padding so values don't sit at edges
+        minVal = actualMin - Math.max(3, range * 0.15);
+        maxVal = actualMax + Math.max(3, range * 0.15);
     }
 
     const range = maxVal - minVal;
+    const trackHeight = 60; // Height of the curve area in pixels
+    const valueOffset = 10; // Offset for the value text above the dot
+
+    // Calculate positions for each hour
+    const positions = hourlyData.map((hour, index) => {
+        let currentVal;
+        switch (hourlyViewMode) {
+            case 'feels':
+                currentVal = hour.feelsLike;
+                break;
+            case 'precip':
+                currentVal = hour.precipProb;
+                break;
+            case 'temp':
+            default:
+                currentVal = hour.temp;
+                break;
+        }
+        // Calculate vertical position (0 = bottom, trackHeight = top)
+        const position = range > 0 ? ((currentVal - minVal) / range) * trackHeight : trackHeight / 2;
+        return { value: currentVal, position };
+    });
 
     container.innerHTML = hourlyData.map((hour, index) => {
         const timeLabel = hour.isNow ? 'NOW' : formatTime(hour.time.toISOString());
         const spanClass = `condition-${conditionSpans[index]}`;
 
-        // Get value and pill width based on current view mode
-        let displayValue, currentVal, pillClass;
+        // Get value and styling based on current view mode
+        let displayValue, currentVal, pillClass, valueClass;
 
         switch (hourlyViewMode) {
             case 'feels':
                 currentVal = hour.feelsLike;
                 displayValue = `${hour.feelsLike}°`;
                 pillClass = getTempClass(hour.feelsLike);
+                valueClass = getTempClass(hour.feelsLike);
                 break;
             case 'precip':
                 currentVal = hour.precipProb;
                 displayValue = `${hour.precipProb}%`;
-                if (hour.precipProb >= 70) pillClass = 'precip-high';
-                else if (hour.precipProb >= 40) pillClass = 'precip-medium';
-                else if (hour.precipProb > 0) pillClass = 'precip-low';
-                else pillClass = 'precip-none';
+                if (hour.precipProb >= 70) {
+                    pillClass = 'precip-high';
+                    valueClass = 'precip-high';
+                } else if (hour.precipProb >= 40) {
+                    pillClass = 'precip-medium';
+                    valueClass = 'precip-medium';
+                } else if (hour.precipProb > 0) {
+                    pillClass = 'precip-low';
+                    valueClass = 'precip-low';
+                } else {
+                    pillClass = 'precip-none';
+                    valueClass = '';
+                }
                 break;
             case 'temp':
             default:
                 currentVal = hour.temp;
                 displayValue = `${hour.temp}°`;
                 pillClass = getTempClass(hour.temp);
+                valueClass = getTempClass(hour.temp);
                 break;
         }
 
-        // Calculate pill width as percentage of range
-        const pillWidth = range > 0 ? Math.round(((currentVal - minVal) / range) * 100) : 50;
+        // Position the value and dot vertically based on the temperature/value
+        const verticalPos = positions[index].position;
+        const dotBottom = verticalPos;
+        const valueBottom = verticalPos + valueOffset;
 
         return `
             <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
@@ -1639,9 +1674,9 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
                 <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
                 <div class="hourly-row-pill-container">
                     <div class="hourly-pill-track">
-                        <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
+                        <div class="hourly-pill ${pillClass}" style="bottom: ${dotBottom}px"></div>
                     </div>
-                    <div class="hourly-row-value">${displayValue}</div>
+                    <div class="hourly-row-value ${valueClass}" style="bottom: ${valueBottom}px">${displayValue}</div>
                 </div>
             </div>
         `;
