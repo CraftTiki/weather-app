@@ -56,6 +56,7 @@ The GitHub Action (`.github/workflows/deploy.yml`) will automatically:
 - **Method:** FTP via GitHub Actions
 - **Trigger:** Push to `main` branch
 - **Secrets Required:** `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` (configured in GitHub repo settings)
+- **FTP Path Note:** Bluehost FTP root is at `public_html/`, so `server-dir` in the workflow is `weather/` (not `/public_html/weather/`)
 
 ### Manual Deployment (if needed)
 Upload these files to `public_html/weather/` via cPanel File Manager or FTP:
