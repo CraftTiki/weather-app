@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+    // Cache buster - bump version when deploying updates
+    (function() {
+        var version = '1.1';
+        var param = 'v=' + version;
+        if (window.location.search.indexOf(param) === -1) {
+            window.location.replace(window.location.pathname + '?' + param);
+        }
+    })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Weather Buster - Get current conditions, hourly and weekly forecasts for any location">
