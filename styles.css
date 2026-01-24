@@ -1396,10 +1396,23 @@ input {
   grid-template-columns: 120px auto 1fr auto;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   background-color: #f8f9fa;
   border-radius: var(--radius-md);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Icon + precipitation inline group */
+.daily-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.daily-precip-inline {
+  font-size: 0.75rem;
+  color: var(--accent-color);
+  white-space: nowrap;
 }
 
 .daily-item:hover {
@@ -1891,7 +1904,7 @@ input {
 
   /* Daily forecast mobile */
   .daily-item {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr auto auto;
     padding: var(--spacing-sm);
     gap: var(--spacing-sm);
   }
@@ -1909,24 +1922,16 @@ input {
     height: 24px;
   }
 
-  .daily-temp-range {
-    min-width: 140px;
-    max-width: none;
+  .daily-icon-group {
+    gap: 4px;
   }
 
-  .temp-low,
-  .temp-high {
-    font-size: 0.85rem;
-    min-width: 32px;
+  .daily-precip-inline {
+    font-size: 0.7rem;
   }
 
-  .temp-bar-container {
-    min-width: 50px;
-  }
-
-  .daily-precip {
-    font-size: 0.8rem;
-    min-width: 40px;
+  .daily-condition {
+    display: none;
   }
 
   .daily-temps {
@@ -2040,8 +2045,8 @@ input {
     grid-template-columns: 100px auto 1fr auto;
   }
 
-  .daily-temp-range {
-    max-width: 220px;
+  .daily-condition {
+    display: block;
   }
 }
 
@@ -2104,10 +2109,6 @@ input {
     grid-template-columns: 120px auto 1fr auto;
   }
 
-  .daily-temp-range {
-    max-width: 300px;
-  }
-
   .hourly-item {
     width: 90px;
     padding: var(--spacing-lg);
@@ -2131,11 +2132,7 @@ input {
 
   .daily-item {
     grid-template-columns: 150px auto 1fr auto;
-    padding: var(--spacing-lg);
-  }
-
-  .daily-temp-range {
-    max-width: 350px;
+    padding: var(--spacing-md) var(--spacing-lg);
   }
 }
 
