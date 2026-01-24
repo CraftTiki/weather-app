@@ -2768,8 +2768,8 @@ input {
 /* Expand icon hint on radar */
 .radar-expand-hint {
   position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-sm);
+  top: var(--spacing-md);
+  right: var(--spacing-md);
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
@@ -2777,16 +2777,21 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   color: var(--text-secondary);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
-  z-index: 10;
+  z-index: 500;
 }
 
 .map-section-inline:hover .radar-expand-hint {
   opacity: 1;
+}
+
+[data-theme="dark"] .radar-expand-hint {
+  background-color: var(--bg-card);
+  color: var(--text-secondary);
 }
 
 /* Responsive map */

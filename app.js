@@ -2377,11 +2377,9 @@ function closeFullscreenRadar() {
     document.body.style.overflow = '';
     isFullscreenRadarOpen = false;
 
-    // Sync position back to main map
-    if (fullscreenRadarMap && weatherMap) {
-        const center = fullscreenRadarMap.getCenter();
-        const zoom = fullscreenRadarMap.getZoom();
-        weatherMap.setView(center, zoom);
+    // Recenter main map on current location
+    if (weatherMap && currentLocation) {
+        weatherMap.setView([currentLocation.latitude, currentLocation.longitude], 10);
     }
 
     // Sync frame index back to main radar
