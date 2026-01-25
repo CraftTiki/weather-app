@@ -19,7 +19,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Weather Buster</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=1.1">
+    <link rel="stylesheet" href="styles.css?v=1.3">
 </head>
 <body>
 
@@ -177,6 +177,7 @@
         <!-- Hourly Timeline Section (Dark Sky style) -->
         <section id="hourly-forecast" class="hourly-timeline-section" aria-label="Hourly weather forecast">
             <h2 class="section-title">Next 12 Hours</h2>
+            <div class="hourly-precip-summary" id="hourly-precip-summary"></div>
             <div class="hourly-timeline" role="list" aria-label="Hourly forecast timeline">
                 <!-- Hourly rows will be dynamically inserted here -->
             </div>
@@ -276,6 +277,6 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=1.2"></script>
+    <script src="app.js?v=1.3"></script>
 </body>
 </html>

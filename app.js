@@ -1535,8 +1535,31 @@ function renderHourlyForecast() {
     // Render the timeline
     renderHourlyTimeline(container, hourlyData, conditionSpans);
 
+    // Render 12-hour precipitation summary
+    renderHourlyPrecipSummary();
+
     // Set up toggle button listeners
     setupHourlyToggles();
+}
+
+/**
+ * Render the 12-hour precipitation summary
+ */
+function renderHourlyPrecipSummary() {
+    const summaryEl = document.getElementById('hourly-precip-summary');
+    if (!summaryEl) return;
+
+    const precip = get12HourPrecip();
+
+    if (precip.amount >= 0.01 && precip.type) {
+        const amountStr = precip.amount < 0.1
+            ? precip.amount.toFixed(2)
+            : precip.amount.toFixed(1);
+        summaryEl.textContent = `${precip.type}: ${amountStr} in.`;
+        summaryEl.style.display = 'block';
+    } else {
+        summaryEl.style.display = 'none';
+    }
 }
 
 /**
@@ -1681,6 +1704,82 @@ function setupHourlyToggles() {
 }
 
 /**
+ * Extract precipitation type from forecast conditions string
+ * @param {string} conditions - The forecast conditions (e.g., "Freezing Rain", "Rain Showers")
+ * @returns {string|null} The precipitation type or null if none
+ */
+function getPrecipType(conditions) {
+    if (!conditions) return null;
+    const lower = conditions.toLowerCase();
+
+    // Check for specific precipitation types (order matters - check more specific first)
+    if (lower.includes('freezing rain')) return 'Freezing Rain';
+    if (lower.includes('ice') || lower.includes('sleet')) return 'Ice/Sleet';
+    if (lower.includes('snow')) return 'Snow';
+    if (lower.includes('rain') || lower.includes('shower') || lower.includes('drizzle')) return 'Rain';
+    if (lower.includes('thunderstorm') || lower.includes('t-storm')) return 'Rain';
+
+    return null;
+}
+
+/**
+ * Calculate total precipitation amount for next 12 hours from gridpoint data
+ * @returns {{amount: number, type: string|null}} Precipitation amount in inches and type
+ */
+function get12HourPrecip() {
+    const data = window.weatherData;
+    if (!data?.gridpoint?.properties) return { amount: 0, type: null };
+
+    const props = data.gridpoint.properties;
+    const qpfValues = props.quantitativePrecipitation?.values || [];
+    const weather = props.weather?.values || [];
+
+    const now = new Date();
+    const end12h = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
+    let totalMm = 0;
+    let precipType = null;
+
+    // Get total precipitation amount
+    for (const item of qpfValues) {
+        const [startStr, duration] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(duration.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+        if (start < end12h && end > now) {
+            totalMm += item.value || 0;
+        }
+    }
+
+    // Get precipitation type from weather data
+    for (const item of weather) {
+        const [startStr, duration] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(duration.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+        if (start < end12h && end > now && item.value) {
+            for (const w of item.value) {
+                if (w?.weather) {
+                    const type = getPrecipType(w.weather);
+                    if (type) {
+                        precipType = type;
+                        break;
+                    }
+                }
+            }
+            if (precipType) break;
+        }
+    }
+
+    return {
+        amount: totalMm / 25.4, // Convert mm to inches
+        type: precipType
+    };
+}
+
+/**
  * Calculate total precipitation amount for a day from gridpoint data
  * @param {string} dayStartStr - ISO date string for the start of the day
  * @returns {number} Total precipitation in inches
@@ -1733,6 +1832,7 @@ function render7DayForecast() {
             const nightPeriod = periods[i + 1];
             const precipChance = period.probabilityOfPrecipitation?.value || 0;
             const precipAmount = getDayPrecipAmount(period.startTime);
+            const precipType = getPrecipType(period.shortForecast);
             days.push({
                 name: period.name,
                 date: period.startTime,
@@ -1742,7 +1842,8 @@ function render7DayForecast() {
                 icon: getWeatherIcon(period.shortForecast, true),
                 detailedForecast: period.detailedForecast,
                 precipChance: precipChance,
-                precipAmount: precipAmount
+                precipAmount: precipAmount,
+                precipType: precipType
             });
         }
     }
@@ -1751,11 +1852,15 @@ function render7DayForecast() {
         // Show precip inline with icon if > 0%
         let precipInline = '';
         if (day.precipChance > 0) {
-            // Format precipitation amount (show if >= 0.01 inches)
-            const precipAmountStr = day.precipAmount >= 0.01
-                ? ` / ${day.precipAmount < 0.1 ? day.precipAmount.toFixed(2) : day.precipAmount.toFixed(1)} in.`
-                : '';
-            precipInline = `<span class="daily-precip-inline">💧${day.precipChance}%${precipAmountStr}</span>`;
+            // Format precipitation with type and amount
+            let precipText = `💧${day.precipChance}%`;
+            if (day.precipAmount >= 0.01 && day.precipType) {
+                const amountStr = day.precipAmount < 0.1
+                    ? day.precipAmount.toFixed(2)
+                    : day.precipAmount.toFixed(1);
+                precipText += `<br><span class="precip-amount">${day.precipType}: ${amountStr} in.</span>`;
+            }
+            precipInline = `<span class="daily-precip-inline">${precipText}</span>`;
         }
 
         return `
