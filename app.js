@@ -1681,6 +1681,39 @@ function setupHourlyToggles() {
 }
 
 /**
+ * Calculate total precipitation amount for a day from gridpoint data
+ * @param {string} dayStartStr - ISO date string for the start of the day
+ * @returns {number} Total precipitation in inches
+ */
+function getDayPrecipAmount(dayStartStr) {
+    const data = window.weatherData;
+    if (!data?.gridpoint?.properties?.quantitativePrecipitation?.values) return 0;
+
+    const qpfValues = data.gridpoint.properties.quantitativePrecipitation.values;
+    const dayStart = new Date(dayStartStr);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    let totalMm = 0;
+
+    for (const item of qpfValues) {
+        const [startStr, duration] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(duration.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+        // Check if this period overlaps with the day
+        if (start < dayEnd && end > dayStart) {
+            totalMm += item.value || 0;
+        }
+    }
+
+    // Convert mm to inches (1 inch = 25.4 mm)
+    return totalMm / 25.4;
+}
+
+/**
  * Render 7-day forecast
  */
 function render7DayForecast() {
@@ -1698,6 +1731,8 @@ function render7DayForecast() {
         const period = periods[i];
         if (period.isDaytime) {
             const nightPeriod = periods[i + 1];
+            const precipChance = period.probabilityOfPrecipitation?.value || 0;
+            const precipAmount = getDayPrecipAmount(period.startTime);
             days.push({
                 name: period.name,
                 date: period.startTime,
@@ -1706,16 +1741,22 @@ function render7DayForecast() {
                 conditions: period.shortForecast,
                 icon: getWeatherIcon(period.shortForecast, true),
                 detailedForecast: period.detailedForecast,
-                precipChance: period.probabilityOfPrecipitation?.value || 0
+                precipChance: precipChance,
+                precipAmount: precipAmount
             });
         }
     }
 
     container.innerHTML = days.map((day, index) => {
         // Show precip inline with icon if > 0%
-        const precipInline = day.precipChance > 0
-            ? `<span class="daily-precip-inline">💧${day.precipChance}%</span>`
-            : '';
+        let precipInline = '';
+        if (day.precipChance > 0) {
+            // Format precipitation amount (show if >= 0.01 inches)
+            const precipAmountStr = day.precipAmount >= 0.01
+                ? ` / ${day.precipAmount < 0.1 ? day.precipAmount.toFixed(2) : day.precipAmount.toFixed(1)}"`
+                : '';
+            precipInline = `<span class="daily-precip-inline">💧${day.precipChance}%${precipAmountStr}</span>`;
+        }
 
         return `
         <div class="daily-item" role="listitem" data-day-index="${index}" data-day-date="${day.date}">
