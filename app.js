@@ -1556,7 +1556,7 @@ function renderHourlyPrecipSummary() {
             ? precip.amount.toFixed(2)
             : precip.amount.toFixed(1);
         summaryEl.textContent = `${precip.type}: ${amountStr} in.`;
-        summaryEl.style.display = 'block';
+        summaryEl.style.display = 'inline';
     } else {
         summaryEl.style.display = 'none';
     }

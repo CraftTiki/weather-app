@@ -929,15 +929,19 @@ input {
   margin-bottom: var(--spacing-lg);
 }
 
-/* Hourly precipitation summary */
+/* Hourly precipitation summary (inline with title) */
 .hourly-precip-summary {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 400;
   color: var(--accent-color);
-  margin-bottom: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: rgba(74, 144, 226, 0.1);
-  border-radius: var(--radius-sm);
+  margin-left: var(--spacing-sm);
   display: none;
+}
+
+.hourly-precip-summary::before {
+  content: "•";
+  margin-right: var(--spacing-xs);
+  opacity: 0.5;
 }
 
 /* ==========================================================================
