@@ -1080,6 +1080,11 @@ if (document.readyState === 'loading') {
     initializeApp();
 }
 
+// Prevent pinch-to-zoom on iOS
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('gestureend', (e) => e.preventDefault());
+
 // =============================================================================
 // RENDERING HELPER FUNCTIONS
 // =============================================================================
