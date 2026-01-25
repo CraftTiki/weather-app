@@ -2837,6 +2837,7 @@ function createRadarLayers() {
             opacity: 0,
             attribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
             maxZoom: 18,
+            maxNativeZoom: 8,  // RainViewer tiles only exist up to zoom 8, upscale beyond
             zIndex: 100
         });
         radarLayers.push(layer);
@@ -3276,6 +3277,7 @@ function createFullscreenRadarLayers() {
             opacity: 0,
             attribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
             maxZoom: 18,
+            maxNativeZoom: 8,          // RainViewer tiles only exist up to zoom 8, upscale beyond
             zIndex: 100,
             updateWhenZooming: false,  // Don't fetch tiles while zooming
             updateWhenIdle: true,      // Only update when map stops moving
