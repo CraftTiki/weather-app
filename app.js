@@ -37,21 +37,21 @@ const WMO_WEATHER_CODES = {
     3: { description: 'Overcast', icon: { day: '☁️', night: '☁️' }, category: 'cloudy' },
     45: { description: 'Fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
     48: { description: 'Depositing rime fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
-    51: { description: 'Light drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
-    53: { description: 'Moderate drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    51: { description: 'Light drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
+    53: { description: 'Moderate drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     55: { description: 'Dense drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
-    56: { description: 'Light freezing drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    56: { description: 'Light freezing drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     57: { description: 'Dense freezing drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
-    61: { description: 'Slight rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    61: { description: 'Slight rain', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     63: { description: 'Moderate rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
     65: { description: 'Heavy rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
-    66: { description: 'Light freezing rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    66: { description: 'Light freezing rain', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     67: { description: 'Heavy freezing rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
     71: { description: 'Slight snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
     73: { description: 'Moderate snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
     75: { description: 'Heavy snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
     77: { description: 'Snow grains', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
-    80: { description: 'Slight rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    80: { description: 'Slight rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     81: { description: 'Moderate rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
     82: { description: 'Violent rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
     85: { description: 'Slight snow showers', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
@@ -1675,10 +1675,14 @@ function getConditionCategory(time, props) {
 
     const weatherValue = weather?.value || [];
     const hasThunder = weatherValue.some(w => w?.weather?.toLowerCase().includes('thunder'));
+    const hasDrizzle = weatherValue.some(w => w?.weather?.toLowerCase().includes('drizzle'));
+    const hasLightRain = weatherValue.some(w => {
+        const wLower = w?.weather?.toLowerCase() || '';
+        return wLower.includes('light') && (wLower.includes('rain') || wLower.includes('shower'));
+    });
     const hasRain = weatherValue.some(w =>
         w?.weather?.toLowerCase().includes('rain') ||
-        w?.weather?.toLowerCase().includes('shower') ||
-        w?.weather?.toLowerCase().includes('drizzle')
+        w?.weather?.toLowerCase().includes('shower')
     );
     const hasSnow = weatherValue.some(w => w?.weather?.toLowerCase().includes('snow'));
     const hasFog = weatherValue.some(w =>
@@ -1690,9 +1694,10 @@ function getConditionCategory(time, props) {
     const precipProb = getValueAtTime(props.probabilityOfPrecipitation, time);
     const skyCover = getValueAtTime(props.skyCover, time);
 
-    // Determine category based on conditions
+    // Determine category based on conditions (order matters - most severe first)
     if (hasThunder) return 'storm';
     if (hasSnow) return 'snow';
+    if (hasDrizzle || hasLightRain) return 'drizzle';
     if (hasRain || (precipProb && precipProb > 50)) return 'rain';
     if (hasFog) return 'fog';
     if (skyCover !== null && skyCover > 60) return 'cloudy';

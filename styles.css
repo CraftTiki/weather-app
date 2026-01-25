@@ -1014,11 +1014,15 @@ input {
 
 /* Duration bar colors by condition type */
 .hourly-duration-bar.condition-rain {
-  background-color: #3b82f6; /* Blue for precipitation */
+  background-color: #2563eb; /* Deeper blue for rain */
+}
+
+.hourly-duration-bar.condition-drizzle {
+  background-color: #06b6d4; /* Cyan/teal for light rain/drizzle */
 }
 
 .hourly-duration-bar.condition-snow {
-  background-color: #93c5fd; /* Light blue for snow */
+  background-color: #a5b4fc; /* Soft indigo-blue for snow */
 }
 
 .hourly-duration-bar.condition-storm {
