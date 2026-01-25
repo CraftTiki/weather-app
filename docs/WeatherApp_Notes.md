@@ -16,12 +16,14 @@
 - [x] **Deployed to Bluehost** - https://www.crafttiki.com/weather/
 - [x] **Mobile-friendly design** - Touch-friendly, responsive layout
 - [x] **Dark mode** - Toggle in settings, persists to localStorage
-- [x] **Animated radar** - RainViewer API, always-on, auto-loads first frame
+- [x] **Animated radar** - RainViewer API, always-on, auto-loads first frame, preloaded frames
 - [x] **Dark Sky-style hero** - Large icon + temp + feels like + alert badges
 - [x] **Hyperlocal precipitation** - "Rain starting in X min" summary
 - [x] **Inline header** - Search bar shows location, settings icon inline
 - [x] **Search autocomplete** - Photon API, prefix matching, force valid selections
 - [x] **Recent locations** - Quick access dropdown with event delegation for mobile
+- [x] **Time Machine** - View historical weather for any date (1940-present) via Open-Meteo API
+- [x] **Distinct condition colors** - Cyan for light rain, blue for rain, etc.
 
 ### Completed Tasks (January 2026)
 - [x] Task 1: Mobile-friendly design improvements
@@ -313,8 +315,81 @@ Detailed Table
 #### API Endpoints Added
 - Photon (Autocomplete): `https://photon.komoot.io/api/?q={query}&limit=10&lang=en&bbox=-179.9,18.0,-66.9,72.0`
 
+### Time Machine Feature (January 25, 2026)
+
+#### Overview
+Added "Time Machine" feature allowing users to view historical weather for any past date from 1940 to present.
+
+#### Implementation
+- **API**: Open-Meteo Historical Archive (`https://archive-api.open-meteo.com/v1/archive`)
+  - Free, no API key required
+  - Date range: 1940 to ~3 days ago
+  - Hourly resolution, 9km spatial resolution
+- **UI Components**:
+  - Expandable section below 7-day forecast with date picker
+  - Purple banner at top when viewing historical data
+  - "Return to Today" button to exit Time Machine mode
+- **Data Display**:
+  - Hero section shows historical high temp, conditions, precipitation total
+  - 24-hour hourly breakdown for selected date
+  - Uses WMO weather codes (mapped to icons/descriptions)
+- **Behavior**:
+  - Radar, alerts, and 7-day forecast hidden in historical mode (not available)
+  - Re-fetches historical data when location changes while in Time Machine mode
+  - Date picker constrained to valid range (1940 to 3 days ago)
+
+#### WMO Weather Codes
+Open-Meteo uses WMO codes (0-99) instead of NWS text codes:
+- 0: Clear sky
+- 1-3: Mainly clear to overcast
+- 45, 48: Fog
+- 51-57: Drizzle (light to dense)
+- 61-67: Rain (slight to heavy)
+- 71-77: Snow
+- 80-86: Rain/snow showers
+- 95-99: Thunderstorm
+
+### Radar Improvements (January 25, 2026)
+
+#### Cache Busting
+- Added timestamp parameter and `cache: 'no-store'` to RainViewer API fetch
+- Fixes stale radar data on mobile page refresh
+
+#### Frame Preloading
+- All radar frames now preloaded in background on page load
+- Layers added to map with `opacity: 0` to trigger tile fetching
+- Results in smoother animation playback and scrubbing
+
+### Weather Condition Colors (January 25, 2026)
+
+#### Distinct Condition Bar Colors
+Added more distinct colors for hourly forecast condition bars:
+
+| Condition | Color | Hex |
+|-----------|-------|-----|
+| Drizzle/Light Rain | Cyan/Teal | `#06b6d4` |
+| Rain | Deep Blue | `#2563eb` |
+| Snow | Soft Indigo | `#a5b4fc` |
+| Storm | Purple | `#7c3aed` |
+| Cloudy | Gray | `#6b7280` |
+| Clear | Gold | `#fbbf24` |
+| Fog | Light Gray | `#9ca3af` |
+
+#### Light Rain vs Rain Detection
+- Uses precipitation probability to differentiate intensity
+- < 70% precip probability → 'drizzle' category (cyan, "Light Rain")
+- >= 70% precip probability → 'rain' category (blue, "Rain")
+- More reliable than text-matching for "light" in NWS descriptions
+
+### Bug Fixes (January 25, 2026)
+- Fixed "This Afternoon" showing as "Thi" in 7-day forecast
+  - Now properly displays as "Today" for current day periods
+- Fixed missing 'drizzle' case in getConditionText()
+- App version bumped to 1.2.0
+
 ### Code Organization
 - Radar functions in dedicated section
 - Settings functions grouped together
 - Map functions with radar integration
+- Time Machine functions in dedicated section
 - Clean event listener setup

@@ -2243,6 +2243,7 @@ function render7DayForecast() {
                     <button type="button" class="hourly-toggle" data-view="feels" data-day="${index}" role="tab" aria-selected="false">FEELS</button>
                     <button type="button" class="hourly-toggle" data-view="precip" data-day="${index}" role="tab" aria-selected="false">PRECIP</button>
                 </div>
+                <div class="daily-chart-rain-total" id="daily-rain-${index}"></div>
             </div>
         </div>
     `}).join('');
@@ -2420,6 +2421,20 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
 
     // Render the chart using the day's view mode
     renderDayChartTimeline(chartContainer, hourlyData, conditionSpans, dailyViewModes[dayIndex]);
+
+    // Display total rain amount for the day
+    const rainTotalContainer = document.querySelector(`#daily-rain-${dayIndex}`);
+    if (rainTotalContainer) {
+        const rainInches = getDayPrecipAmount(dayDateStr);
+        if (rainInches > 0) {
+            // Format to 2 decimal places, but trim trailing zeros
+            const formatted = rainInches.toFixed(2).replace(/\.?0+$/, '');
+            rainTotalContainer.innerHTML = `<span class="rain-icon">💧</span> Rain: ${formatted} in.`;
+            rainTotalContainer.style.display = 'block';
+        } else {
+            rainTotalContainer.style.display = 'none';
+        }
+    }
 }
 
 /**

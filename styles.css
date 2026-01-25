@@ -1591,6 +1591,19 @@ input {
   border-top: 1px solid rgba(128, 128, 128, 0.1);
 }
 
+/* Rain total display below toggles */
+.daily-chart-rain-total {
+  display: none;
+  text-align: center;
+  margin-top: var(--spacing-sm);
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.daily-chart-rain-total .rain-icon {
+  margin-right: 2px;
+}
+
 /* Dark mode adjustments */
 [data-theme="dark"] .daily-expanded-chart {
   border-top-color: rgba(255, 255, 255, 0.1);
