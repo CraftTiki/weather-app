@@ -278,11 +278,12 @@ function getCurrentPosition() {
 
 /**
  * Get approximate location from IP address (no permission required)
+ * Uses ipapi.co which supports HTTPS on free tier
  * @returns {Promise<{latitude: number, longitude: number, city: string, region: string}>}
  */
 async function getLocationFromIP() {
     try {
-        const response = await fetch('http://ip-api.com/json/?fields=status,message,city,regionName,lat,lon');
+        const response = await fetch('https://ipapi.co/json/');
 
         if (!response.ok) {
             throw new Error('IP geolocation service unavailable');
@@ -290,15 +291,15 @@ async function getLocationFromIP() {
 
         const data = await response.json();
 
-        if (data.status !== 'success') {
-            throw new Error(data.message || 'IP geolocation failed');
+        if (data.error) {
+            throw new Error(data.reason || 'IP geolocation failed');
         }
 
         return {
-            latitude: data.lat,
-            longitude: data.lon,
+            latitude: data.latitude,
+            longitude: data.longitude,
             city: data.city,
-            region: data.regionName
+            region: data.region
         };
     } catch (error) {
         console.error('[WeatherBuster] IP geolocation failed:', error);
