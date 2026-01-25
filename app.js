@@ -1870,12 +1870,10 @@ function render7DayForecast() {
                     <div class="daily-day">${day.name}</div>
                     <div class="daily-date">${formatDate(day.date)}</div>
                 </div>
-                <div class="daily-icon-group">
-                    <span class="daily-icon">${day.icon}</span>
-                    ${precipInline}
-                </div>
+                ${precipInline ? `<div class="daily-precip-group">${precipInline}</div>` : ''}
                 <div class="daily-condition">${day.conditions}</div>
                 <div class="daily-temps">
+                    <span class="daily-icon">${day.icon}</span>
                     <span class="daily-high ${getTempClass(day.high)}">${day.high}°</span>
                     <span class="daily-low">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
                     <svg class="expand-indicator" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

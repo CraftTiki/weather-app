@@ -1377,11 +1377,10 @@ input {
   border-radius: var(--radius-md);
 }
 
-/* Icon + precipitation inline group */
-.daily-icon-group {
+/* Precipitation group */
+.daily-precip-group {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
 .daily-precip-inline {
@@ -1411,8 +1410,8 @@ input {
 }
 
 .daily-icon {
-  width: 40px;
-  height: 40px;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .daily-condition {
@@ -1423,8 +1422,9 @@ input {
 
 .daily-temps {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
-  min-width: 80px;
+  min-width: 120px;
   justify-content: flex-end;
 }
 
