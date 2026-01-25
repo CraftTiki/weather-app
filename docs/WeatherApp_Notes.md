@@ -264,6 +264,16 @@ Detailed Table
 - CSS transition (150ms) on radar layers for smooth blending
 - Proper touch event support for mobile
 
+### 7-Day Forecast Precipitation Alignment Fix (January 25, 2026)
+- Fixed precipitation percentage alignment issue in 7-day forecast
+- Problem: "💧99%" was shifted right instead of left-aligned under day name
+- Root cause: Duplicate `.daily-precip` CSS rule with `justify-content: flex-end`
+- Solution:
+  - Consolidated `.daily-precip` styles to single location (line ~1389)
+  - Removed conflicting duplicate rule that had `justify-content: flex-end`
+  - Added `margin-left: -2px` to nudge emoji left for better optical alignment
+  - Simplified CSS: removed unnecessary flexbox, added `text-align: left`
+
 ### Code Organization
 - Radar functions in dedicated section
 - Settings functions grouped together

@@ -1367,31 +1367,11 @@ input {
   gap: var(--spacing-md);
 }
 
-.daily-info {
-  flex: 1;
-}
 
 .daily-item {
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: #f8f9fa;
   border-radius: var(--radius-md);
-}
-
-/* Precipitation group */
-.daily-precip-group {
-  display: flex;
-  align-items: center;
-}
-
-.daily-precip-inline {
-  font-size: 0.75rem;
-  color: var(--accent-color);
-  line-height: 1.3;
-}
-
-.daily-precip-inline .precip-amount {
-  font-size: 0.7rem;
-  opacity: 0.9;
 }
 
 .daily-item:hover {
@@ -1402,30 +1382,28 @@ input {
 .daily-day {
   font-weight: 600;
   color: var(--text-primary);
+  padding: 0;
+  margin: 0;
 }
 
-.daily-date {
-  font-size: 0.85rem;
-  color: var(--text-light);
+.daily-precip {
+  font-size: 0.7rem;
+  color: #3b82f6;
+  margin-top: 1px;
+  margin-left: -2px;
+  padding: 0;
+  line-height: 1;
+  text-align: left;
+}
+
+[data-theme="dark"] .daily-precip {
+  color: #60a5fa;
 }
 
 .daily-icon {
   font-size: 1.5rem;
   line-height: 1;
-}
-
-.daily-condition {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  min-width: 100px;
-}
-
-.daily-temps {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  min-width: 120px;
-  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .daily-high {
@@ -1445,9 +1423,26 @@ input {
 
 .daily-item-header {
   display: grid;
-  grid-template-columns: 120px auto 1fr auto;
+  grid-template-columns: 60px 36px 1fr 24px;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.daily-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.daily-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.expand-indicator {
+  justify-self: center;
+  color: var(--text-light);
 }
 
 .daily-item.expanded {
@@ -1525,51 +1520,54 @@ input {
 .daily-temp-range {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
+  min-width: 200px;
   flex: 1;
-  max-width: 280px;
-  min-width: 180px;
+}
+
+.temp-bar-track {
+  position: relative;
+  height: 28px;
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  margin-left: 30px;  /* Space for low temp label */
+  margin-right: 30px; /* Space for high temp label */
 }
 
 .temp-low,
 .temp-high {
+  position: absolute;
   font-size: 0.9rem;
-  min-width: 36px;
-  text-align: center;
+  white-space: nowrap;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
 }
 
 .temp-low {
   color: var(--text-light);
+  transform: translateY(-50%) translateX(-100%);
+  padding-right: 6px;
 }
 
 .temp-high {
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.temp-bar-container {
-  flex: 1;
-  height: 6px;
-  position: relative;
-  min-width: 80px;
-}
-
-.temp-bar-track {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100%;
-  background: var(--bg-card-alt);
-  border-radius: 3px;
+  transform: translateY(-50%);
+  padding-left: 6px;
 }
 
 .temp-bar-fill {
   position: absolute;
-  top: 0;
-  height: 100%;
-  border-radius: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 8px;
+  border-radius: 10px;
   transition: all 0.3s ease;
+  min-width: 12px;
+  z-index: 1;
 }
 
 /* Temperature bar color gradients */
@@ -1593,20 +1591,7 @@ input {
   background: linear-gradient(90deg, #fb923c, #ef4444);
 }
 
-/* Precipitation indicator */
-.daily-precip {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.85rem;
-  color: var(--accent-color);
-  min-width: 50px;
-  justify-content: flex-end;
-}
-
-.precip-icon {
-  font-size: 0.8rem;
-}
+/* Precipitation indicator - styles now consolidated at line ~1389 */
 
 /* Temperature Color Coding */
 .temp-cold {
@@ -1901,38 +1886,58 @@ input {
   }
 
   .daily-item-header {
-    grid-template-columns: 1fr auto auto;
-    gap: var(--spacing-sm);
+    grid-template-columns: 50px 28px 1fr 20px;
+    gap: var(--spacing-xs);
   }
 
   .daily-day {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
   }
 
-  .daily-date {
-    font-size: 0.75rem;
+  .daily-precip {
+    font-size: 0.65rem;
   }
 
   .daily-icon {
-    width: 24px;
+    font-size: 1.1rem;
+  }
+
+  .temp-bar-track {
+    min-width: 80px;
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+
+  .temp-low,
+  .temp-high {
+    font-size: 0.8rem;
+  }
+
+  .daily-temp-range {
+    min-width: 140px;
+    flex: 1;
+  }
+
+  .temp-bar-track {
+    min-width: 100px;
     height: 24px;
   }
 
-  .daily-icon-group {
-    gap: 4px;
+  .temp-low,
+  .temp-high {
+    font-size: 0.8rem;
   }
 
-  .daily-precip-inline {
-    font-size: 0.7rem;
+  .temp-low {
+    padding-right: 4px;
   }
 
-  .daily-condition {
-    display: none;
+  .temp-high {
+    padding-left: 4px;
   }
 
-  .daily-temps {
-    min-width: 60px;
-    font-size: 0.9rem;
+  .temp-bar-fill {
+    height: 6px;
   }
 
 
@@ -2028,11 +2033,16 @@ input {
   }
 
   .daily-item-header {
-    grid-template-columns: 100px auto 1fr auto;
+    grid-template-columns: 65px 40px 1fr 24px;
+    gap: var(--spacing-sm);
   }
 
-  .daily-condition {
-    display: block;
+  .daily-temp-range {
+    min-width: 220px;
+  }
+
+  .temp-bar-track {
+    min-width: 140px;
   }
 }
 
@@ -2092,7 +2102,16 @@ input {
   }
 
   .daily-item-header {
-    grid-template-columns: 120px auto 1fr auto;
+    grid-template-columns: 70px 44px 1fr 28px;
+    gap: var(--spacing-md);
+  }
+
+  .daily-temp-range {
+    min-width: 280px;
+  }
+
+  .temp-bar-track {
+    min-width: 200px;
   }
 
   .hourly-item {
@@ -2121,7 +2140,15 @@ input {
   }
 
   .daily-item-header {
-    grid-template-columns: 150px auto 1fr auto;
+    grid-template-columns: 75px 48px 1fr 32px;
+  }
+
+  .daily-temp-range {
+    min-width: 340px;
+  }
+
+  .temp-bar-track {
+    min-width: 260px;
   }
 }
 

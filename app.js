@@ -1116,6 +1116,19 @@ function getTempClass(temp) {
 }
 
 /**
+ * Get CSS class for temperature range bar gradient
+ * @param {number} temp - Temperature in Fahrenheit
+ * @returns {string} CSS class for bar gradient
+ */
+function getTempBarClass(temp) {
+    if (temp < 32) return 'temp-bar-cold';
+    if (temp < 50) return 'temp-bar-cool';
+    if (temp < 70) return 'temp-bar-mild';
+    if (temp < 85) return 'temp-bar-warm';
+    return 'temp-bar-hot';
+}
+
+/**
  * Format time from ISO string
  * @param {string} isoString - ISO date string
  * @returns {string} Formatted time string
@@ -1871,8 +1884,15 @@ function render7DayForecast() {
         }
     }
 
+    // Calculate week's min/max temps for relative positioning
+    const weekHighs = days.map(d => d.high).filter(t => typeof t === 'number');
+    const weekLows = days.map(d => d.low).filter(t => typeof t === 'number');
+    const weekMax = Math.max(...weekHighs, ...weekLows);
+    const weekMin = Math.min(...weekHighs, ...weekLows);
+    const weekRange = weekMax - weekMin || 1; // Avoid division by zero
+
     container.innerHTML = days.map((day, index) => {
-        // Show precip inline with icon if > 0%
+        // Show precip inline with condition if > 0%
         let precipInline = '';
         if (day.precipChance > 0) {
             // Format precipitation with type and amount
@@ -1881,28 +1901,48 @@ function render7DayForecast() {
                 const amountStr = day.precipAmount < 0.1
                     ? day.precipAmount.toFixed(2)
                     : day.precipAmount.toFixed(1);
-                precipText += `<br><span class="precip-amount">${day.precipType}: ${amountStr} in.</span>`;
+                precipText += ` ${amountStr}in`;
             }
-            precipInline = `<span class="daily-precip-inline">${precipText}</span>`;
+            precipInline = `<span class="daily-precip-tag">${precipText}</span>`;
         }
+
+        // Calculate positions as percentage of week's range
+        // The temps float to their relative position within the track
+        const dayLow = typeof day.low === 'number' ? day.low : weekMin;
+        const dayHigh = typeof day.high === 'number' ? day.high : weekMax;
+        const lowPosition = ((dayLow - weekMin) / weekRange) * 100;
+        const highPosition = ((dayHigh - weekMin) / weekRange) * 100;
+
+        // Get temperature bar color based on average temp
+        const avgTemp = (dayLow + dayHigh) / 2;
+        const tempBarClass = getTempBarClass(avgTemp);
+
+        // Format day name: "Today" stays, others become 3-letter abbreviations
+        const dayName = day.name === 'Today' ? 'Today' : day.name.slice(0, 3);
+
+        // Precipitation shown under day name
+        const precipDisplay = day.precipChance > 0
+            ? `<div class="daily-precip">💧${day.precipChance}%</div>`
+            : '';
 
         return `
         <div class="daily-item" role="listitem" data-day-index="${index}" data-day-date="${day.date}">
             <div class="daily-item-header">
                 <div class="daily-info">
-                    <div class="daily-day">${day.name}</div>
-                    <div class="daily-date">${formatDate(day.date)}</div>
+                    <div class="daily-day">${dayName}</div>
+                    ${precipDisplay}
                 </div>
-                ${precipInline ? `<div class="daily-precip-group">${precipInline}</div>` : ''}
-                <div class="daily-condition">${day.conditions}</div>
-                <div class="daily-temps">
-                    <span class="daily-icon">${day.icon}</span>
-                    <span class="daily-high ${getTempClass(day.high)}">${day.high}°</span>
-                    <span class="daily-low">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
-                    <svg class="expand-indicator" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
+                <span class="daily-icon">${day.icon}</span>
+                <div class="daily-temp-range">
+                    <div class="temp-bar-track">
+                        <span class="temp-low" style="left: ${lowPosition}%">${typeof day.low === 'number' ? day.low + '°' : day.low}</span>
+                        <div class="temp-bar-fill ${tempBarClass}" style="left: ${lowPosition}%; width: ${highPosition - lowPosition}%;"></div>
+                        <span class="temp-high" style="left: ${highPosition}%">${day.high}°</span>
+                    </div>
                 </div>
+                <svg class="expand-indicator" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
             </div>
             <div class="daily-expanded-chart" id="daily-chart-${index}">
                 <div class="daily-chart-title">Hourly Breakdown</div>
