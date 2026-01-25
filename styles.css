@@ -398,24 +398,6 @@ input {
   opacity: 1;
 }
 
-.clear-search-btn {
-  background: none;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.clear-search-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: var(--text-primary);
-}
-
 /* Search Dropdown */
 .search-dropdown {
   position: absolute;
@@ -627,10 +609,6 @@ input {
 
 [data-theme="dark"] .dropdown-header {
   border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .clear-search-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] .recent-location-remove:hover {

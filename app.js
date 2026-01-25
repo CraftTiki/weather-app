@@ -864,19 +864,6 @@ function setupEventListeners() {
         elements.retryBtn.addEventListener('click', handleRetry);
     }
 
-    // Clear search button
-    const clearSearchBtn = document.getElementById('clear-search-btn');
-    if (clearSearchBtn) {
-        clearSearchBtn.addEventListener('click', () => {
-            if (elements.locationSearch) {
-                elements.locationSearch.value = '';
-                clearSearchBtn.setAttribute('hidden', '');
-                hideAutocompleteSuggestions();
-                elements.locationSearch.focus();
-            }
-        });
-    }
-
     // Clear recents button
     const clearRecentsBtn = document.getElementById('clear-recents-btn');
     if (clearRecentsBtn) {
@@ -931,16 +918,7 @@ function setupEventListeners() {
  * Handle search input changes
  */
 function handleSearchInput(e) {
-    const clearBtn = document.getElementById('clear-search-btn');
     const query = e.target.value.trim();
-
-    if (clearBtn) {
-        if (query.length > 0) {
-            clearBtn.removeAttribute('hidden');
-        } else {
-            clearBtn.setAttribute('hidden', '');
-        }
-    }
 
     // Debounced autocomplete search
     if (autocompleteDebounceTimer) {
