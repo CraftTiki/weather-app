@@ -1753,7 +1753,7 @@ function render7DayForecast() {
         if (day.precipChance > 0) {
             // Format precipitation amount (show if >= 0.01 inches)
             const precipAmountStr = day.precipAmount >= 0.01
-                ? ` / ${day.precipAmount < 0.1 ? day.precipAmount.toFixed(2) : day.precipAmount.toFixed(1)}"`
+                ? ` / ${day.precipAmount < 0.1 ? day.precipAmount.toFixed(2) : day.precipAmount.toFixed(1)} in.`
                 : '';
             precipInline = `<span class="daily-precip-inline">💧${day.precipChance}%${precipAmountStr}</span>`;
         }
