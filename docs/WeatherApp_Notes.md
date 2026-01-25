@@ -20,6 +20,8 @@
 - [x] **Dark Sky-style hero** - Large icon + temp + feels like + alert badges
 - [x] **Hyperlocal precipitation** - "Rain starting in X min" summary
 - [x] **Inline header** - Search bar shows location, settings icon inline
+- [x] **Search autocomplete** - Photon API, prefix matching, force valid selections
+- [x] **Recent locations** - Quick access dropdown with event delegation for mobile
 
 ### Completed Tasks (January 2026)
 - [x] Task 1: Mobile-friendly design improvements
@@ -273,6 +275,43 @@ Detailed Table
   - Removed conflicting duplicate rule that had `justify-content: flex-end`
   - Added `margin-left: -2px` to nudge emoji left for better optical alignment
   - Simplified CSS: removed unnecessary flexbox, added `text-align: left`
+
+### Search Autocomplete & UX Improvements (January 25, 2026)
+
+#### Location Search Autocomplete
+- Added autocomplete suggestions as user types (2+ characters)
+- Uses **Photon API** (https://photon.komoot.io) for better prefix/partial matching
+  - Example: typing "greenv" shows Greenville results
+  - Nominatim didn't handle partial words well
+- Results filtered to US cities/towns, deduplicated
+- 300ms debounce to reduce API calls
+- Enter key selects first suggestion if available
+
+#### Force Valid Locations Only
+- Users must select from autocomplete suggestions
+- Invalid searches show "No results for X" in dropdown (not error popup)
+- Eliminates the "location not found" error loop issue
+- Removed `handleSearch()` free-text search function
+- Simplified retry button (only for network errors now)
+
+#### UI Cleanup
+- Removed clear (X) button from search bar (redundant - field auto-clears on selection)
+- Removed box/card styling from hero summary text (now plain text)
+- Cleaner, less cluttered interface
+
+#### Mobile Fix
+- Fixed double-tap issue on recent locations
+- Root cause: dropdown rebuilt on focus, detaching click targets
+- Solution: event delegation on parent list element
+
+#### Deployment Note
+- GitHub Actions auto-deploy may fail occasionally
+- Manual upload via cPanel File Manager works as backup
+- Files to upload: `index.html`, `styles.css`, `app.js`
+- Upload to: `public_html/weather/`
+
+#### API Endpoints Added
+- Photon (Autocomplete): `https://photon.komoot.io/api/?q={query}&limit=10&lang=en&bbox=-179.9,18.0,-66.9,72.0`
 
 ### Code Organization
 - Radar functions in dedicated section
