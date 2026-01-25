@@ -4,7 +4,7 @@
     <script>
     // Cache buster - bump version when deploying updates
     (function() {
-        var version = '1.1';
+        var version = '1.2';
         var param = 'v=' + version;
         if (window.location.search.indexOf(param) === -1) {
             window.location.replace(window.location.pathname + '?' + param);
@@ -19,7 +19,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Weather Buster</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=2.7">
+    <link rel="stylesheet" href="styles.css?v=2.8">
 </head>
 <body>
 
@@ -78,6 +78,14 @@
                         </button>
                     </div>
                     <div id="search-dropdown" class="search-dropdown" hidden>
+                        <!-- Autocomplete suggestions (shown when typing) -->
+                        <div id="autocomplete-header" class="dropdown-header autocomplete-header" style="display: none;">
+                            <span class="dropdown-title">Suggestions</span>
+                        </div>
+                        <ul id="autocomplete-suggestions" class="autocomplete-list" role="listbox">
+                            <!-- Autocomplete suggestions will be inserted here -->
+                        </ul>
+                        <!-- Current location option -->
                         <ul class="dropdown-list" role="listbox">
                             <li id="use-current-location" class="dropdown-item current-location-item" role="option">
                                 <svg class="dropdown-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -277,6 +285,6 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=2.7"></script>
+    <script src="app.js?v=2.8"></script>
 </body>
 </html>

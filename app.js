@@ -7,7 +7,7 @@
 // CONSTANTS AND CONFIGURATION
 // =============================================================================
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 const NWS_API_BASE = 'https://api.weather.gov';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
@@ -63,7 +63,7 @@ const INTENSITY_CODES = {
 // =============================================================================
 
 let currentLocation = null;
-let lastSearchQuery = null;
+let autocompleteDebounceTimer = null;
 let weatherMap = null;
 let mapMarker = null;
 let radarLayer = null;
@@ -277,6 +277,78 @@ async function geocodeLocation(query) {
             throw new Error('Network error. Please check your internet connection.');
         }
         throw error;
+    }
+}
+
+/**
+ * Search for location suggestions (autocomplete)
+ * Uses Photon API which is designed for autocomplete/prefix matching
+ * @param {string} query - Partial city name or ZIP code
+ * @returns {Promise<Array>} Array of location suggestions
+ */
+async function searchLocationSuggestions(query) {
+    if (!query || query.trim().length < 2) {
+        return [];
+    }
+
+    const encodedQuery = encodeURIComponent(query.trim());
+    // Photon API - designed for autocomplete, handles partial matches well
+    // Filter to US results by using bbox (bounding box for continental US + Alaska + Hawaii)
+    const url = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=10&lang=en&bbox=-179.9,18.0,-66.9,72.0`;
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const data = await response.json();
+
+        if (!data || !data.features || data.features.length === 0) {
+            return [];
+        }
+
+        // Filter and format results
+        const seen = new Set(); // Track seen locations to avoid duplicates
+        return data.features
+            .filter(feature => {
+                const props = feature.properties || {};
+                const country = props.country;
+                const type = props.type;
+                // Only include US results and cities/towns/villages
+                return country === 'United States' &&
+                       (type === 'city' || type === 'town' || type === 'village' ||
+                        type === 'locality' || type === 'district' || type === 'county');
+            })
+            .map(feature => {
+                const props = feature.properties || {};
+                const coords = feature.geometry?.coordinates || [];
+
+                // Format display name (City, State)
+                const city = props.name || props.city || props.town || props.village;
+                const state = props.state;
+                const displayName = state ? `${city}, ${state}` : city;
+
+                return {
+                    displayName,
+                    fullName: props.name,
+                    latitude: coords[1], // GeoJSON is [lon, lat]
+                    longitude: coords[0],
+                    state: state || ''
+                };
+            })
+            .filter(loc => {
+                // Remove duplicates (same city, state)
+                const key = loc.displayName.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .slice(0, 5); // Limit to 5 suggestions
+    } catch (error) {
+        console.warn('Autocomplete error:', error);
+        return [];
     }
 }
 
@@ -601,40 +673,6 @@ async function handleLocationSelected(lat, lon, name, options = {}) {
 // =============================================================================
 
 /**
- * Handle search button click or Enter key press
- */
-async function handleSearch() {
-    const query = elements.locationSearch?.value?.trim();
-
-    if (!query) {
-        showError('Please enter a city name or ZIP code');
-        return;
-    }
-
-    lastSearchQuery = query;
-    hideSearchDropdown();
-
-    try {
-        hideError();
-        showLoading();
-
-        const location = await geocodeLocation(query);
-
-        // Format display name (simplify if too long)
-        let displayName = location.displayName;
-        const parts = displayName.split(', ');
-        if (parts.length > 2) {
-            displayName = `${parts[0]}, ${parts[1]}`;
-        }
-
-        await handleLocationSelected(location.latitude, location.longitude, displayName);
-    } catch (error) {
-        console.error('Search error:', error);
-        showError(error.message);
-    }
-}
-
-/**
  * Handle geolocation button click
  */
 async function handleGeolocation() {
@@ -658,19 +696,19 @@ async function handleGeolocation() {
 function handleRetry() {
     hideError();
 
-    if (lastSearchQuery) {
-        // Retry last search
-        if (elements.locationSearch) {
-            elements.locationSearch.value = lastSearchQuery;
-        }
-        handleSearch();
-    } else if (currentLocation) {
-        // Retry with current location
+    // Retry fetching weather for current location (for network errors)
+    if (currentLocation) {
         handleLocationSelected(
             currentLocation.latitude,
             currentLocation.longitude,
             currentLocation.name
         );
+    } else {
+        // No location yet - focus search so user can select one
+        if (elements.locationSearch) {
+            elements.locationSearch.focus();
+            showSearchDropdown();
+        }
     }
 }
 
@@ -681,7 +719,18 @@ function handleRetry() {
 function handleSearchKeypress(event) {
     if (event.key === 'Enter') {
         event.preventDefault();
-        handleSearch();
+        // Select first autocomplete suggestion if available
+        const suggestionsList = document.getElementById('autocomplete-suggestions');
+        const firstItem = suggestionsList?.querySelector('.autocomplete-item');
+        if (firstItem && suggestionsList._suggestions?.length > 0) {
+            const loc = suggestionsList._suggestions[0];
+            hideSearchDropdown();
+            if (elements.locationSearch) {
+                elements.locationSearch.value = '';
+            }
+            handleLocationSelected(loc.latitude, loc.longitude, loc.displayName);
+        }
+        // If no suggestions, do nothing - user must select a valid location
     }
 }
 
@@ -822,6 +871,7 @@ function setupEventListeners() {
             if (elements.locationSearch) {
                 elements.locationSearch.value = '';
                 clearSearchBtn.setAttribute('hidden', '');
+                hideAutocompleteSuggestions();
                 elements.locationSearch.focus();
             }
         });
@@ -882,13 +932,116 @@ function setupEventListeners() {
  */
 function handleSearchInput(e) {
     const clearBtn = document.getElementById('clear-search-btn');
+    const query = e.target.value.trim();
+
     if (clearBtn) {
-        if (e.target.value.length > 0) {
+        if (query.length > 0) {
             clearBtn.removeAttribute('hidden');
         } else {
             clearBtn.setAttribute('hidden', '');
         }
     }
+
+    // Debounced autocomplete search
+    if (autocompleteDebounceTimer) {
+        clearTimeout(autocompleteDebounceTimer);
+    }
+
+    if (query.length >= 2) {
+        autocompleteDebounceTimer = setTimeout(async () => {
+            const suggestions = await searchLocationSuggestions(query);
+            showAutocompleteSuggestions(suggestions, query);
+        }, 300); // 300ms debounce
+    } else {
+        // Show regular dropdown with recents if query is too short
+        hideAutocompleteSuggestions();
+    }
+}
+
+/**
+ * Show autocomplete suggestions in dropdown
+ * @param {Array} suggestions - Array of location suggestions
+ * @param {string} query - The search query (for "no results" message)
+ */
+function showAutocompleteSuggestions(suggestions, query = '') {
+    const dropdown = document.getElementById('search-dropdown');
+    const suggestionsList = document.getElementById('autocomplete-suggestions');
+    const suggestionsHeader = document.getElementById('autocomplete-header');
+    const recentsSection = document.querySelector('.dropdown-header');
+    const recentsList = document.getElementById('recent-locations');
+    const currentLocationItem = document.getElementById('use-current-location');
+
+    if (!dropdown || !suggestionsList) return;
+
+    // Hide recents and current location when user is actively searching
+    if (recentsSection) recentsSection.style.display = 'none';
+    if (recentsList) recentsList.style.display = 'none';
+    if (currentLocationItem) currentLocationItem.style.display = 'none';
+
+    if (suggestions.length === 0) {
+        // Show "No results" message
+        if (suggestionsHeader) suggestionsHeader.style.display = 'none';
+        suggestionsList.innerHTML = `
+            <li class="autocomplete-no-results">
+                <span>No results for "${query}"</span>
+            </li>
+        `;
+        dropdown.removeAttribute('hidden');
+        return;
+    }
+
+    if (suggestionsHeader) suggestionsHeader.style.display = '';
+
+    suggestionsList.innerHTML = suggestions.map((loc, index) => `
+        <li class="autocomplete-item" role="option" data-index="${index}">
+            <svg class="autocomplete-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span class="autocomplete-text">${loc.displayName}</span>
+        </li>
+    `).join('');
+
+    // Store suggestions for click handlers
+    suggestionsList._suggestions = suggestions;
+
+    // Add click handlers
+    suggestionsList.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const index = parseInt(item.dataset.index);
+            const loc = suggestionsList._suggestions[index];
+            if (loc) {
+                hideSearchDropdown();
+                if (elements.locationSearch) {
+                    elements.locationSearch.value = '';
+                }
+                handleLocationSelected(loc.latitude, loc.longitude, loc.displayName);
+            }
+        });
+    });
+
+    dropdown.removeAttribute('hidden');
+}
+
+/**
+ * Hide autocomplete suggestions and restore normal dropdown
+ */
+function hideAutocompleteSuggestions() {
+    const suggestionsList = document.getElementById('autocomplete-suggestions');
+    const suggestionsHeader = document.getElementById('autocomplete-header');
+    const recentsSection = document.querySelector('.dropdown-header');
+    const recentsList = document.getElementById('recent-locations');
+    const currentLocationItem = document.getElementById('use-current-location');
+
+    if (suggestionsList) {
+        suggestionsList.innerHTML = '';
+        suggestionsList._suggestions = [];
+    }
+    if (suggestionsHeader) suggestionsHeader.style.display = 'none';
+    // Restore recents and current location
+    if (recentsSection) recentsSection.style.display = '';
+    if (recentsList) recentsList.style.display = '';
+    if (currentLocationItem) currentLocationItem.style.display = '';
 }
 
 /**
@@ -899,6 +1052,9 @@ function showSearchDropdown() {
     const recentsList = document.getElementById('recent-locations');
     const dropdownHeader = document.querySelector('.dropdown-header');
     if (!dropdown || !recentsList) return;
+
+    // Reset autocomplete suggestions when showing dropdown
+    hideAutocompleteSuggestions();
 
     const recents = getRecentLocations();
 
@@ -955,6 +1111,11 @@ function hideSearchDropdown() {
     const dropdown = document.getElementById('search-dropdown');
     if (dropdown) {
         dropdown.setAttribute('hidden', '');
+    }
+    // Clear any pending autocomplete requests
+    if (autocompleteDebounceTimer) {
+        clearTimeout(autocompleteDebounceTimer);
+        autocompleteDebounceTimer = null;
     }
 }
 
@@ -3166,7 +3327,6 @@ window.WeatherBuster = {
     showError,
     hideError,
     // Event handlers
-    handleSearch,
     handleGeolocation,
     // NWS API functions
     getGridPoint,
