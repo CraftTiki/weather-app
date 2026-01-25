@@ -53,6 +53,13 @@ When modifying `app.js` or `styles.css`, **always bump the version query string*
 ```
 Increment the version number (e.g., `v=1.2` → `v=1.3`) with each change.
 
+### App Version
+The app version is defined in `app.js` as `APP_VERSION` constant at the top of the file:
+```javascript
+const APP_VERSION = '1.0.0';
+```
+This version is displayed in the Settings panel at the bottom. Update this when making significant releases.
+
 The GitHub Action (`.github/workflows/deploy.yml`) will automatically:
 1. Checkout the code
 2. Upload `index.html`, `styles.css`, and `app.js` to Bluehost
