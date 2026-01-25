@@ -1391,6 +1391,45 @@ function renderPrecipitationSummary(props) {
         return null;
     }
 
+    // Helper to get weather value at specific time
+    function getWeatherAtTime(targetTime) {
+        if (!props.weather?.values) return [];
+        for (const item of props.weather.values) {
+            const [startStr, duration] = item.validTime.split('/');
+            const start = new Date(startStr);
+            const hours = parseInt(duration.match(/PT(\d+)H/)?.[1] || '1');
+            const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+            if (targetTime >= start && targetTime < end) {
+                return item.value || [];
+            }
+        }
+        return [];
+    }
+
+    // Determine precipitation type from weather data
+    function getPrecipType() {
+        const weatherValue = getWeatherAtTime(now);
+        const snowAmount = getValueAtTime(props.snowfallAmount, now);
+
+        // Check for snow
+        const hasSnow = weatherValue.some(w => w?.weather?.toLowerCase().includes('snow')) || (snowAmount && snowAmount > 0);
+        if (hasSnow) return 'snow';
+
+        // Check for freezing rain/sleet
+        const hasFreezingRain = weatherValue.some(w =>
+            w?.weather?.toLowerCase().includes('freezing') ||
+            w?.weather?.toLowerCase().includes('sleet') ||
+            w?.weather?.toLowerCase().includes('ice')
+        );
+        if (hasFreezingRain) return 'freezing rain';
+
+        // Default to rain
+        return 'rain';
+    }
+
+    const precipType = getPrecipType();
+    const precipLabel = precipType.charAt(0).toUpperCase() + precipType.slice(1); // Capitalize
+
     // Check precipitation probability for the next hour in 10-min increments
     const precipProbs = [];
     for (let i = 0; i <= 60; i += 10) {
@@ -1410,28 +1449,28 @@ function renderPrecipitationSummary(props) {
         // Currently precipitating - look for when it stops
         const stopPoint = precipProbs.find(p => p.prob < 30 && p.minutes > 0);
         if (stopPoint) {
-            summary = `Rain stopping in ${stopPoint.minutes} min.`;
+            summary = `${precipLabel} stopping in ${stopPoint.minutes} min.`;
         } else {
             // Check intensity
             const qpf = getValueAtTime(props.quantitativePrecipitation, now);
             if (qpf && qpf > 5) {
-                summary = 'Heavy rain for the next hour.';
+                summary = `Heavy ${precipType} for the next hour.`;
             } else if (qpf && qpf > 1) {
-                summary = 'Rain continuing for the next hour.';
+                summary = `${precipLabel} continuing for the next hour.`;
             } else {
-                summary = 'Light rain for the next hour.';
+                summary = `Light ${precipType} for the next hour.`;
             }
         }
     } else {
         // Not currently precipitating - look for when it starts
         const startPoint = precipProbs.find(p => p.prob >= 50 && p.minutes > 0);
         if (startPoint) {
-            summary = `Rain starting in ${startPoint.minutes} min.`;
+            summary = `${precipLabel} starting in ${startPoint.minutes} min.`;
         } else {
             // Check if any chance at all
             const maxProb = Math.max(...precipProbs.map(p => p.prob));
             if (maxProb >= 30) {
-                summary = `${Math.round(maxProb)}% chance of rain in the next hour.`;
+                summary = `${Math.round(maxProb)}% chance of ${precipType} in the next hour.`;
             } else {
                 summary = 'Next Hour: No precipitation.';
             }
