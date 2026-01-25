@@ -3209,7 +3209,7 @@ function initializeFullscreenRadarMap() {
         zoom = 8;
     }
 
-    // Create fullscreen map with full interactivity
+    // Create fullscreen map with full interactivity (optimized for mobile)
     fullscreenRadarMap = L.map('fullscreen-radar-map', {
         center: center,
         zoom: zoom,
@@ -3219,7 +3219,11 @@ function initializeFullscreenRadarMap() {
         touchZoom: true,
         doubleClickZoom: true,
         boxZoom: true,
-        keyboard: true
+        keyboard: true,
+        maxZoom: 12,           // Limit max zoom to prevent excessive tile requests
+        zoomSnap: 0.5,         // Smoother zoom steps
+        zoomDelta: 0.5,        // Smaller zoom increments
+        wheelPxPerZoomLevel: 120  // Slower scroll zoom
     });
 
     // Add base tile layer
@@ -3266,13 +3270,16 @@ function createFullscreenRadarLayers() {
     });
     fullscreenRadarLayers = [];
 
-    // Create a layer for each frame
+    // Create a layer for each frame with optimized settings for mobile
     radarFrames.forEach((frame) => {
         const layer = L.tileLayer(RAINVIEWER_TILE_URL.replace('{path}', frame.path), {
             opacity: 0,
             attribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
             maxZoom: 18,
-            zIndex: 100
+            zIndex: 100,
+            updateWhenZooming: false,  // Don't fetch tiles while zooming
+            updateWhenIdle: true,      // Only update when map stops moving
+            keepBuffer: 2              // Reduce tile buffer to save memory
         });
         fullscreenRadarLayers.push(layer);
     });
