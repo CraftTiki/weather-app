@@ -2782,7 +2782,13 @@ function createRadarLayers() {
         radarLayers.push(layer);
     });
 
-    console.log('[WeatherBuster] Created', radarLayers.length, 'radar layers');
+    // Preload all frames by adding them to the map with opacity 0
+    // This triggers the browser to fetch tiles in the background for smooth animation
+    radarLayers.forEach(layer => {
+        layer.addTo(weatherMap);
+    });
+
+    console.log('[WeatherBuster] Created and preloading', radarLayers.length, 'radar layers');
 }
 
 /**
@@ -3209,6 +3215,11 @@ function createFullscreenRadarLayers() {
             zIndex: 100
         });
         fullscreenRadarLayers.push(layer);
+    });
+
+    // Preload all frames for smooth animation
+    fullscreenRadarLayers.forEach(layer => {
+        layer.addTo(fullscreenRadarMap);
     });
 }
 
