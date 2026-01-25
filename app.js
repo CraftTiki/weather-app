@@ -1676,10 +1676,6 @@ function getConditionCategory(time, props) {
     const weatherValue = weather?.value || [];
     const hasThunder = weatherValue.some(w => w?.weather?.toLowerCase().includes('thunder'));
     const hasDrizzle = weatherValue.some(w => w?.weather?.toLowerCase().includes('drizzle'));
-    const hasLightRain = weatherValue.some(w => {
-        const wLower = w?.weather?.toLowerCase() || '';
-        return wLower.includes('light') && (wLower.includes('rain') || wLower.includes('shower'));
-    });
     const hasRain = weatherValue.some(w =>
         w?.weather?.toLowerCase().includes('rain') ||
         w?.weather?.toLowerCase().includes('shower')
@@ -1690,15 +1686,23 @@ function getConditionCategory(time, props) {
         w?.weather?.toLowerCase().includes('mist')
     );
 
-    // Check precipitation probability
+    // Check precipitation probability and sky cover
     const precipProb = getValueAtTime(props.probabilityOfPrecipitation, time);
     const skyCover = getValueAtTime(props.skyCover, time);
 
     // Determine category based on conditions (order matters - most severe first)
     if (hasThunder) return 'storm';
     if (hasSnow) return 'snow';
-    if (hasDrizzle || hasLightRain) return 'drizzle';
-    if (hasRain || (precipProb && precipProb > 50)) return 'rain';
+
+    // Use precip probability to distinguish light vs heavier rain
+    // Drizzle/light rain: explicit drizzle OR rain with lower probability
+    // Rain: rain with higher probability (more certain = likely heavier)
+    if (hasDrizzle) return 'drizzle';
+    if (hasRain) {
+        return (precipProb && precipProb >= 70) ? 'rain' : 'drizzle';
+    }
+    if (precipProb && precipProb > 50) return 'drizzle'; // Chance of precip but no specific type
+
     if (hasFog) return 'fog';
     if (skyCover !== null && skyCover > 60) return 'cloudy';
     return 'clear';
