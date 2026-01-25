@@ -277,6 +277,36 @@ function getCurrentPosition() {
 }
 
 /**
+ * Get approximate location from IP address (no permission required)
+ * @returns {Promise<{latitude: number, longitude: number, city: string, region: string}>}
+ */
+async function getLocationFromIP() {
+    try {
+        const response = await fetch('http://ip-api.com/json/?fields=status,message,city,regionName,lat,lon');
+
+        if (!response.ok) {
+            throw new Error('IP geolocation service unavailable');
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'IP geolocation failed');
+        }
+
+        return {
+            latitude: data.lat,
+            longitude: data.lon,
+            city: data.city,
+            region: data.regionName
+        };
+    } catch (error) {
+        console.error('[WeatherBuster] IP geolocation failed:', error);
+        throw error;
+    }
+}
+
+/**
  * Convert a city name or ZIP code to latitude/longitude coordinates
  * @param {string} query - City name, ZIP code, or address to geocode
  * @returns {Promise<{latitude: number, longitude: number, displayName: string}>}
@@ -1260,12 +1290,15 @@ async function initializeApp() {
             savedLocation.name
         );
     } else {
-        // Default to user's geolocation on first visit
-        console.log('[WeatherBuster] No saved location, requesting geolocation...');
+        // Default to approximate location from IP (no permission required)
+        console.log('[WeatherBuster] No saved location, using IP geolocation...');
         try {
-            await handleGeolocation();
+            const ipLocation = await getLocationFromIP();
+            const locationName = `${ipLocation.city}, ${ipLocation.region}`;
+            console.log('[WeatherBuster] IP location:', locationName);
+            await handleLocationSelected(ipLocation.latitude, ipLocation.longitude, locationName);
         } catch (error) {
-            console.log('[WeatherBuster] Geolocation failed or denied, waiting for user input');
+            console.log('[WeatherBuster] IP geolocation failed, waiting for user input');
         }
     }
 }
