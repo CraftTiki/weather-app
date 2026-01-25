@@ -1473,56 +1473,73 @@ function renderHourlyForecast() {
     // Get next 12 hours starting from now
     const now = new Date();
     const hourlyData = [];
+    const seenHours = new Set();
 
     for (const item of temps) {
-        const start = new Date(item.validTime.split('/')[0]);
-        if (start >= now && hourlyData.length < 12) {
-            let temp = item.value;
-            if (isC) temp = temp * 9 / 5 + 32;
-            temp = Math.round(temp);
+        const [startStr, durationStr] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(durationStr?.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
-            // Get feels like temperature
-            let feelsLike = null;
-            if (props.apparentTemperature?.values) {
-                for (const fItem of props.apparentTemperature.values) {
-                    const [fStartStr, fDuration] = fItem.validTime.split('/');
-                    const fStart = new Date(fStartStr);
-                    const fHours = parseInt(fDuration.match(/PT(\d+)H/)?.[1] || '1');
-                    const fEnd = new Date(fStart.getTime() + fHours * 60 * 60 * 1000);
-                    if (start >= fStart && start < fEnd) {
-                        feelsLike = fItem.value;
-                        if (isC) feelsLike = feelsLike * 9 / 5 + 32;
-                        feelsLike = Math.round(feelsLike);
-                        break;
+        // Include if now falls within this period OR if it starts in the future
+        if (end > now && hourlyData.length < 12) {
+            // Expand multi-hour periods into individual hours
+            for (let h = 0; h < hours && hourlyData.length < 12; h++) {
+                const hourTime = new Date(start.getTime() + h * 60 * 60 * 1000);
+                const hourKey = hourTime.toISOString();
+
+                // Skip hours in the past and avoid duplicates
+                if (hourTime.getTime() + 60 * 60 * 1000 <= now.getTime()) continue;
+                if (seenHours.has(hourKey)) continue;
+                seenHours.add(hourKey);
+
+                let temp = item.value;
+                if (isC) temp = temp * 9 / 5 + 32;
+                temp = Math.round(temp);
+
+                // Get feels like temperature
+                let feelsLike = null;
+                if (props.apparentTemperature?.values) {
+                    for (const fItem of props.apparentTemperature.values) {
+                        const [fStartStr, fDuration] = fItem.validTime.split('/');
+                        const fStart = new Date(fStartStr);
+                        const fHours = parseInt(fDuration.match(/PT(\d+)H/)?.[1] || '1');
+                        const fEnd = new Date(fStart.getTime() + fHours * 60 * 60 * 1000);
+                        if (hourTime >= fStart && hourTime < fEnd) {
+                            feelsLike = fItem.value;
+                            if (isC) feelsLike = feelsLike * 9 / 5 + 32;
+                            feelsLike = Math.round(feelsLike);
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Get precipitation probability
-            let precipProb = null;
-            if (props.probabilityOfPrecipitation?.values) {
-                for (const pItem of props.probabilityOfPrecipitation.values) {
-                    const [pStartStr, pDuration] = pItem.validTime.split('/');
-                    const pStart = new Date(pStartStr);
-                    const pHours = parseInt(pDuration.match(/PT(\d+)H/)?.[1] || '1');
-                    const pEnd = new Date(pStart.getTime() + pHours * 60 * 60 * 1000);
-                    if (start >= pStart && start < pEnd) {
-                        precipProb = Math.round(pItem.value);
-                        break;
+                // Get precipitation probability
+                let precipProb = null;
+                if (props.probabilityOfPrecipitation?.values) {
+                    for (const pItem of props.probabilityOfPrecipitation.values) {
+                        const [pStartStr, pDuration] = pItem.validTime.split('/');
+                        const pStart = new Date(pStartStr);
+                        const pHours = parseInt(pDuration.match(/PT(\d+)H/)?.[1] || '1');
+                        const pEnd = new Date(pStart.getTime() + pHours * 60 * 60 * 1000);
+                        if (hourTime >= pStart && hourTime < pEnd) {
+                            precipProb = Math.round(pItem.value);
+                            break;
+                        }
                     }
                 }
-            }
 
-            hourlyData.push({
-                time: start,
-                temp,
-                feelsLike: feelsLike !== null ? feelsLike : temp,
-                precipProb: precipProb !== null ? precipProb : 0,
-                icon: getHourlyWeatherIcon(start, props),
-                condition: getConditionText(start, props),
-                category: getConditionCategory(start, props),
-                isNow: hourlyData.length === 0
-            });
+                hourlyData.push({
+                    time: hourTime,
+                    temp,
+                    feelsLike: feelsLike !== null ? feelsLike : temp,
+                    precipProb: precipProb !== null ? precipProb : 0,
+                    icon: getHourlyWeatherIcon(hourTime, props),
+                    condition: getConditionText(hourTime, props),
+                    category: getConditionCategory(hourTime, props),
+                    isNow: hourlyData.length === 0
+                });
+            }
         }
     }
 
@@ -1989,49 +2006,69 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
 
     // Collect hourly data for this specific day
     const hourlyData = [];
+    const seenHours = new Set();
 
     for (const item of temps) {
         const [startStr, durationStr] = item.validTime.split('/');
         const start = new Date(startStr);
+        const hours = parseInt(durationStr?.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
 
-        // Only include hours for this specific day
-        if (start >= dayStart && start <= dayEnd) {
-            let temp = item.value;
-            if (isC) temp = temp * 9 / 5 + 32;
-            temp = Math.round(temp);
+        // Check if this period overlaps with the target day
+        if (end > dayStart && start <= dayEnd) {
+            // Expand multi-hour periods into individual hours
+            for (let h = 0; h < hours; h++) {
+                const hourTime = new Date(start.getTime() + h * 60 * 60 * 1000);
+                const hourKey = hourTime.toISOString();
 
-            // Find corresponding apparent temperature
-            let feelsLike = null;
-            for (const at of appTemps) {
-                const atStart = new Date(at.validTime.split('/')[0]);
-                if (atStart.getTime() === start.getTime()) {
-                    feelsLike = at.value;
-                    if (isC) feelsLike = feelsLike * 9 / 5 + 32;
-                    feelsLike = Math.round(feelsLike);
-                    break;
+                // Only include hours for this specific day and avoid duplicates
+                if (hourTime < dayStart || hourTime > dayEnd) continue;
+                if (seenHours.has(hourKey)) continue;
+                seenHours.add(hourKey);
+
+                let temp = item.value;
+                if (isC) temp = temp * 9 / 5 + 32;
+                temp = Math.round(temp);
+
+                // Find corresponding apparent temperature (check if hour falls within range)
+                let feelsLike = null;
+                for (const at of appTemps) {
+                    const [atStartStr, atDuration] = at.validTime.split('/');
+                    const atStart = new Date(atStartStr);
+                    const atHours = parseInt(atDuration?.match(/PT(\d+)H/)?.[1] || '1');
+                    const atEnd = new Date(atStart.getTime() + atHours * 60 * 60 * 1000);
+                    if (hourTime >= atStart && hourTime < atEnd) {
+                        feelsLike = at.value;
+                        if (isC) feelsLike = feelsLike * 9 / 5 + 32;
+                        feelsLike = Math.round(feelsLike);
+                        break;
+                    }
                 }
-            }
 
-            // Find corresponding precipitation probability
-            let precipProb = 0;
-            for (const pp of precipProbs) {
-                const ppStart = new Date(pp.validTime.split('/')[0]);
-                if (ppStart.getTime() === start.getTime()) {
-                    precipProb = pp.value || 0;
-                    break;
+                // Find corresponding precipitation probability (check if hour falls within range)
+                let precipProb = 0;
+                for (const pp of precipProbs) {
+                    const [ppStartStr, ppDuration] = pp.validTime.split('/');
+                    const ppStart = new Date(ppStartStr);
+                    const ppHours = parseInt(ppDuration?.match(/PT(\d+)H/)?.[1] || '1');
+                    const ppEnd = new Date(ppStart.getTime() + ppHours * 60 * 60 * 1000);
+                    if (hourTime >= ppStart && hourTime < ppEnd) {
+                        precipProb = pp.value || 0;
+                        break;
+                    }
                 }
-            }
 
-            hourlyData.push({
-                time: start,
-                temp,
-                feelsLike: feelsLike !== null ? feelsLike : temp,
-                precipProb,
-                icon: getHourlyWeatherIcon(start, props),
-                condition: getConditionText(start, props),
-                category: getConditionCategory(start, props),
-                isNow: false
-            });
+                hourlyData.push({
+                    time: hourTime,
+                    temp,
+                    feelsLike: feelsLike !== null ? feelsLike : temp,
+                    precipProb,
+                    icon: getHourlyWeatherIcon(hourTime, props),
+                    condition: getConditionText(hourTime, props),
+                    category: getConditionCategory(hourTime, props),
+                    isNow: false
+                });
+            }
         }
     }
 
