@@ -870,6 +870,30 @@ function setupEventListeners() {
         clearRecentsBtn.addEventListener('click', clearRecentLocations);
     }
 
+    // Recent locations list - use event delegation for mobile compatibility
+    const recentsList = document.getElementById('recent-locations');
+    if (recentsList) {
+        recentsList.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.recent-location-remove');
+            const item = e.target.closest('.recent-location-item');
+
+            if (removeBtn) {
+                e.stopPropagation();
+                const index = parseInt(removeBtn.dataset.index);
+                removeRecentLocation(index);
+                showSearchDropdown(); // Refresh dropdown
+            } else if (item) {
+                const index = parseInt(item.dataset.index);
+                const recents = recentsList._recents || [];
+                const loc = recents[index];
+                if (loc) {
+                    hideSearchDropdown();
+                    handleLocationSelected(loc.latitude, loc.longitude, loc.name);
+                }
+            }
+        });
+    }
+
     // Use current location button in dropdown (non-blocking)
     const useCurrentLocationBtn = document.getElementById('use-current-location');
     if (useCurrentLocationBtn) {
@@ -1040,6 +1064,7 @@ function showSearchDropdown() {
         // Hide the recents header when there are no recents
         if (dropdownHeader) dropdownHeader.style.display = 'none';
         recentsList.innerHTML = '';
+        recentsList._recents = [];
     } else {
         // Show the recents header when there are recents
         if (dropdownHeader) dropdownHeader.style.display = '';
@@ -1058,25 +1083,8 @@ function showSearchDropdown() {
                 </button>
             </li>
         `).join('');
-
-        // Add click handlers for recent items
-        recentsList.querySelectorAll('.recent-location-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.recent-location-remove')) {
-                    e.stopPropagation();
-                    const index = parseInt(e.target.closest('.recent-location-remove').dataset.index);
-                    removeRecentLocation(index);
-                    showSearchDropdown(); // Refresh dropdown
-                } else {
-                    const index = parseInt(item.dataset.index);
-                    const loc = recents[index];
-                    if (loc) {
-                        hideSearchDropdown();
-                        handleLocationSelected(loc.latitude, loc.longitude, loc.name);
-                    }
-                }
-            });
-        });
+        // Store recents data for event delegation handler
+        recentsList._recents = recents;
     }
 
     dropdown.removeAttribute('hidden');
