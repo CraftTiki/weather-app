@@ -45,6 +45,14 @@ git commit -m "Your commit message"
 git push
 ```
 
+### Cache Busting
+When modifying `app.js` or `styles.css`, **always bump the version query string** in `index.html` to ensure browsers load the updated files:
+```html
+<link rel="stylesheet" href="styles.css?v=1.2">
+<script src="app.js?v=1.2"></script>
+```
+Increment the version number (e.g., `v=1.2` → `v=1.3`) with each change.
+
 The GitHub Action (`.github/workflows/deploy.yml`) will automatically:
 1. Checkout the code
 2. Upload `index.html`, `styles.css`, and `app.js` to Bluehost
