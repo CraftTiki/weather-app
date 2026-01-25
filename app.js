@@ -2426,14 +2426,12 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
     const rainTotalContainer = document.querySelector(`#daily-rain-${dayIndex}`);
     if (rainTotalContainer) {
         const rainInches = getDayPrecipAmount(dayDateStr);
-        if (rainInches > 0) {
-            // Format to 2 decimal places, but trim trailing zeros
-            const formatted = rainInches.toFixed(2).replace(/\.?0+$/, '');
-            rainTotalContainer.innerHTML = `<span class="rain-icon">💧</span> Rain: ${formatted} in.`;
-            rainTotalContainer.style.display = 'block';
-        } else {
-            rainTotalContainer.style.display = 'none';
-        }
+        // Format to 2 decimal places, but trim trailing zeros (show "0" for zero)
+        const formatted = rainInches > 0
+            ? rainInches.toFixed(2).replace(/\.?0+$/, '')
+            : '0';
+        rainTotalContainer.innerHTML = `<span class="rain-icon">💧</span> Rain: ${formatted} in.`;
+        rainTotalContainer.style.display = 'block';
     }
 }
 
