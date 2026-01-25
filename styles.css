@@ -3045,6 +3045,297 @@ input {
    Print Styles
    ========================================================================== */
 
+/* ==========================================================================
+   Time Machine Feature
+   ========================================================================== */
+
+.time-machine-section {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-lg);
+  overflow: hidden;
+}
+
+.time-machine-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.time-machine-toggle:hover {
+  background-color: var(--bg-card-alt);
+}
+
+.time-machine-icon {
+  color: var(--primary-dark);
+  flex-shrink: 0;
+}
+
+.time-machine-label {
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.time-machine-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex: 1;
+  margin-left: var(--spacing-xs);
+}
+
+.time-machine-chevron {
+  color: var(--text-light);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.time-machine-section.expanded .time-machine-chevron,
+.time-machine-section.active .time-machine-chevron {
+  transform: rotate(180deg);
+}
+
+.time-machine-controls {
+  display: none;
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.time-machine-section.expanded .time-machine-controls,
+.time-machine-section.active .time-machine-controls {
+  display: block;
+}
+
+.time-machine-picker {
+  padding-top: var(--spacing-md);
+}
+
+.time-machine-picker-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.time-machine-picker-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.time-machine-date-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  max-width: 200px;
+}
+
+.time-machine-date-input:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
+}
+
+.time-machine-go-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--primary-dark);
+  color: var(--text-white);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.time-machine-go-btn:hover {
+  background-color: var(--primary-light);
+}
+
+.time-machine-go-btn:active {
+  transform: scale(0.98);
+}
+
+/* Time Machine Banner (sticky at top when in historical mode) */
+.time-machine-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  color: white;
+  z-index: 1100;
+  box-shadow: var(--shadow-md);
+}
+
+.time-machine-banner[hidden] {
+  display: none;
+}
+
+.time-machine-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.time-machine-banner-icon {
+  flex-shrink: 0;
+}
+
+.time-machine-banner-text {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.time-machine-banner-date {
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-machine-return-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.time-machine-return-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* When Time Machine banner is visible, add top padding to body */
+body:has(.time-machine-banner:not([hidden])) .app-header {
+  margin-top: 44px;
+}
+
+/* Historical mode - hide elements that don't apply */
+[data-mode="historical"] .map-section-inline,
+[data-mode="historical"] #alerts-container,
+[data-mode="historical"] #weekly-forecast {
+  display: none;
+}
+
+[data-mode="historical"] #hourly-forecast .section-title {
+  color: #7c3aed;
+}
+
+/* Dark mode Time Machine styles */
+[data-theme="dark"] .time-machine-date-input {
+  background-color: var(--bg-card-alt);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .time-machine-date-input:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+}
+
+[data-theme="dark"] .time-machine-controls {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .time-machine-go-btn {
+  background-color: var(--primary-light);
+  color: #121212;
+}
+
+[data-theme="dark"] .time-machine-go-btn:hover {
+  background-color: #90caf9;
+}
+
+/* Mobile Time Machine styles */
+@media (max-width: 480px) {
+  .time-machine-toggle {
+    padding: var(--spacing-sm) var(--spacing-md);
+    flex-wrap: wrap;
+  }
+
+  .time-machine-hint {
+    display: none;
+  }
+
+  .time-machine-controls {
+    padding: 0 var(--spacing-md) var(--spacing-md);
+  }
+
+  .time-machine-picker-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .time-machine-date-input {
+    max-width: none;
+    width: 100%;
+  }
+
+  .time-machine-go-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+  }
+
+  .time-machine-banner {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .time-machine-banner-content {
+    font-size: 0.8rem;
+  }
+
+  .time-machine-banner-text {
+    display: none;
+  }
+
+  .time-machine-return-btn {
+    width: 100%;
+    justify-content: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  body:has(.time-machine-banner:not([hidden])) .app-header {
+    margin-top: 72px;
+  }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
 @media print {
   body {
     background-color: white;

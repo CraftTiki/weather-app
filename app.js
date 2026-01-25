@@ -7,7 +7,7 @@
 // CONSTANTS AND CONFIGURATION
 // =============================================================================
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 const NWS_API_BASE = 'https://api.weather.gov';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
@@ -25,6 +25,41 @@ const MAX_RECENT_LOCATIONS = 5;
 // RainViewer API for animated radar
 const RAINVIEWER_API = 'https://api.rainviewer.com/public/weather-maps.json';
 const RAINVIEWER_TILE_URL = 'https://tilecache.rainviewer.com{path}/256/{z}/{x}/{y}/2/1_1.png';
+
+// Open-Meteo Historical Weather API
+const OPEN_METEO_HISTORICAL_API = 'https://archive-api.open-meteo.com/v1/archive';
+
+// WMO Weather Codes mapping (used by Open-Meteo)
+const WMO_WEATHER_CODES = {
+    0: { description: 'Clear sky', icon: { day: '☀️', night: '🌙' }, category: 'clear' },
+    1: { description: 'Mainly clear', icon: { day: '🌤️', night: '🌙' }, category: 'clear' },
+    2: { description: 'Partly cloudy', icon: { day: '⛅', night: '☁️' }, category: 'cloudy' },
+    3: { description: 'Overcast', icon: { day: '☁️', night: '☁️' }, category: 'cloudy' },
+    45: { description: 'Fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
+    48: { description: 'Depositing rime fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
+    51: { description: 'Light drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    53: { description: 'Moderate drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    55: { description: 'Dense drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    56: { description: 'Light freezing drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    57: { description: 'Dense freezing drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    61: { description: 'Slight rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    63: { description: 'Moderate rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    65: { description: 'Heavy rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    66: { description: 'Light freezing rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    67: { description: 'Heavy freezing rain', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    71: { description: 'Slight snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    73: { description: 'Moderate snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    75: { description: 'Heavy snow', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    77: { description: 'Snow grains', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    80: { description: 'Slight rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    81: { description: 'Moderate rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    82: { description: 'Violent rain showers', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
+    85: { description: 'Slight snow showers', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    86: { description: 'Heavy snow showers', icon: { day: '🌨️', night: '🌨️' }, category: 'snow' },
+    95: { description: 'Thunderstorm', icon: { day: '⛈️', night: '⛈️' }, category: 'storm' },
+    96: { description: 'Thunderstorm with slight hail', icon: { day: '⛈️', night: '⛈️' }, category: 'storm' },
+    99: { description: 'Thunderstorm with heavy hail', icon: { day: '⛈️', night: '⛈️' }, category: 'storm' }
+};
 
 // Weather code translation maps
 const WEATHER_CODES = {
@@ -83,6 +118,11 @@ let isRadarPlaying = false;
 let fullscreenRadarMap = null;
 let fullscreenRadarLayers = [];
 let isFullscreenRadarOpen = false;
+
+// Time Machine state
+let isTimeMachineMode = false;
+let timeMachineDate = null;
+let historicalData = null;
 
 // =============================================================================
 // DOM ELEMENTS
@@ -651,6 +691,12 @@ async function handleLocationSelected(lat, lon, name, options = {}) {
 
         console.log('[WeatherBuster] Weather data fetched successfully');
 
+        // If in Time Machine mode, re-fetch historical data for new location
+        if (isTimeMachineMode && timeMachineDate) {
+            console.log('[WeatherBuster] Re-fetching historical data for new location');
+            await enterTimeMachineMode(timeMachineDate);
+        }
+
         if (fromMap) {
             hideContentLoading();
         } else {
@@ -1196,6 +1242,10 @@ async function initializeApp() {
     setupRadarControls();
     await initializeRadarLayer();
     console.log('[WeatherBuster] Map initialized');
+
+    // Set up Time Machine
+    setupTimeMachineEventListeners();
+    console.log('[WeatherBuster] Time Machine initialized');
 
     // Check for saved location or use geolocation
     const savedLocation = loadSavedLocation();
@@ -3350,6 +3400,384 @@ function setupFullscreenRadarControls() {
 }
 
 // =============================================================================
+// TIME MACHINE FUNCTIONS
+// =============================================================================
+
+/**
+ * Get weather info from WMO code
+ * @param {number} code - WMO weather code
+ * @param {number} hour - Hour of day (0-23) to determine day/night
+ * @returns {Object} Weather info with description, icon, and category
+ */
+function getWMOWeatherInfo(code, hour) {
+    const isDaytime = hour >= 6 && hour < 20;
+    const info = WMO_WEATHER_CODES[code] || WMO_WEATHER_CODES[0];
+    return {
+        description: info.description,
+        icon: isDaytime ? info.icon.day : info.icon.night,
+        category: info.category
+    };
+}
+
+/**
+ * Get valid date range for Time Machine
+ * @returns {{min: string, max: string}} Min and max dates in YYYY-MM-DD format
+ */
+function getValidDateRange() {
+    const today = new Date();
+
+    // Max date: 3 days ago (to ensure data availability)
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() - 3);
+
+    // Min date: January 1, 1940
+    const minDate = new Date(1940, 0, 1);
+
+    return {
+        min: minDate.toISOString().split('T')[0],
+        max: maxDate.toISOString().split('T')[0]
+    };
+}
+
+/**
+ * Fetch historical weather data from Open-Meteo
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Historical weather data
+ */
+async function fetchHistoricalWeather(lat, lon, date) {
+    const params = new URLSearchParams({
+        latitude: lat.toFixed(4),
+        longitude: lon.toFixed(4),
+        start_date: date,
+        end_date: date,
+        hourly: [
+            'temperature_2m',
+            'apparent_temperature',
+            'precipitation_probability',
+            'precipitation',
+            'weather_code',
+            'cloud_cover',
+            'wind_speed_10m',
+            'wind_direction_10m',
+            'relative_humidity_2m'
+        ].join(','),
+        daily: [
+            'temperature_2m_max',
+            'temperature_2m_min',
+            'precipitation_sum',
+            'weather_code'
+        ].join(','),
+        temperature_unit: 'fahrenheit',
+        wind_speed_unit: 'mph',
+        precipitation_unit: 'inch',
+        timezone: 'auto'
+    });
+
+    const url = `${OPEN_METEO_HISTORICAL_API}?${params.toString()}`;
+    console.log('[WeatherBuster] Fetching historical weather:', url);
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[WeatherBuster] Historical API error:', errorText);
+            throw new Error('Failed to fetch historical weather data');
+        }
+
+        const data = await response.json();
+        console.log('[WeatherBuster] Historical data received:', data);
+
+        if (data.error) {
+            throw new Error(data.reason || 'Historical data not available');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('[WeatherBuster] Error fetching historical weather:', error);
+        throw error;
+    }
+}
+
+/**
+ * Enter Time Machine mode with the selected date
+ * @param {string} date - Date in YYYY-MM-DD format
+ */
+async function enterTimeMachineMode(date) {
+    if (!currentLocation) {
+        showError('Please select a location first');
+        return;
+    }
+
+    console.log('[WeatherBuster] Entering Time Machine mode for:', date);
+
+    try {
+        showContentLoading();
+
+        // Fetch historical data
+        historicalData = await fetchHistoricalWeather(
+            currentLocation.latitude,
+            currentLocation.longitude,
+            date
+        );
+
+        // Set state
+        isTimeMachineMode = true;
+        timeMachineDate = date;
+
+        // Update UI
+        document.body.setAttribute('data-mode', 'historical');
+
+        // Update banner with date
+        const banner = document.getElementById('time-machine-banner');
+        if (banner) {
+            const displayDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            banner.querySelector('.time-machine-banner-date').textContent = displayDate;
+            banner.hidden = false;
+        }
+
+        // Show the Time Machine UI as active
+        const timeMachineSection = document.getElementById('time-machine-section');
+        if (timeMachineSection) {
+            timeMachineSection.classList.add('active');
+        }
+
+        // Render historical data
+        renderHistoricalConditions();
+        renderHistoricalHourlyForecast();
+
+        hideContentLoading();
+
+    } catch (error) {
+        console.error('[WeatherBuster] Time Machine error:', error);
+        hideContentLoading();
+        showError(error.message || 'Failed to load historical weather data');
+        exitTimeMachineMode();
+    }
+}
+
+/**
+ * Exit Time Machine mode and return to current weather
+ */
+function exitTimeMachineMode() {
+    console.log('[WeatherBuster] Exiting Time Machine mode');
+
+    // Clear state
+    isTimeMachineMode = false;
+    timeMachineDate = null;
+    historicalData = null;
+
+    // Update UI
+    document.body.removeAttribute('data-mode');
+
+    // Hide banner
+    const banner = document.getElementById('time-machine-banner');
+    if (banner) {
+        banner.hidden = true;
+    }
+
+    // Reset Time Machine UI
+    const timeMachineSection = document.getElementById('time-machine-section');
+    if (timeMachineSection) {
+        timeMachineSection.classList.remove('active');
+    }
+
+    // Clear date picker
+    const datePicker = document.getElementById('time-machine-date');
+    if (datePicker) {
+        datePicker.value = '';
+    }
+
+    // Restore hourly section title
+    const sectionTitle = document.querySelector('#hourly-forecast .section-title');
+    if (sectionTitle) {
+        sectionTitle.innerHTML = 'Next 12 Hours <span class="hourly-precip-summary" id="hourly-precip-summary"></span>';
+    }
+
+    // Re-render current weather if we have data
+    if (window.weatherData) {
+        renderCurrentConditions();
+        renderHourlyForecast();
+        render7DayForecast();
+        renderAlerts();
+    }
+}
+
+/**
+ * Render historical conditions in the hero section
+ */
+function renderHistoricalConditions() {
+    if (!historicalData || !historicalData.daily) {
+        console.warn('[WeatherBuster] No historical data to render');
+        return;
+    }
+
+    const daily = historicalData.daily;
+    const hourly = historicalData.hourly;
+
+    // Get midday values (around noon) for representative conditions
+    const noonIndex = 12; // Assuming hourly data starts at midnight
+
+    // Get temperature - use max temp as "current" for historical
+    const maxTemp = daily.temperature_2m_max?.[0];
+    const minTemp = daily.temperature_2m_min?.[0];
+    const avgTemp = maxTemp && minTemp ? Math.round((maxTemp + minTemp) / 2) : '--';
+
+    // Update hero temperature
+    const tempEl = document.getElementById('current-temp');
+    if (tempEl) {
+        tempEl.textContent = typeof maxTemp === 'number' ? Math.round(maxTemp) : '--';
+    }
+
+    // Get weather code and icon
+    const weatherCode = hourly?.weather_code?.[noonIndex] ?? daily.weather_code?.[0] ?? 0;
+    const weatherInfo = getWMOWeatherInfo(weatherCode, 12);
+
+    // Update hero icon
+    const heroIcon = document.getElementById('hero-icon');
+    if (heroIcon) {
+        heroIcon.textContent = weatherInfo.icon;
+    }
+
+    // Update feels like (use apparent temperature from noon if available)
+    const feelsLikeEl = document.getElementById('feels-like');
+    if (feelsLikeEl) {
+        const feelsLike = hourly?.apparent_temperature?.[noonIndex];
+        feelsLikeEl.textContent = typeof feelsLike === 'number' ? Math.round(feelsLike) : '--';
+    }
+
+    // Update summary
+    const summaryEl = document.getElementById('hero-summary');
+    if (summaryEl) {
+        const precip = daily.precipitation_sum?.[0] ?? 0;
+        let summary = weatherInfo.description;
+        if (precip > 0) {
+            summary += ` • ${precip.toFixed(2)} in precipitation`;
+        }
+        summary += ` • High: ${Math.round(maxTemp)}° / Low: ${Math.round(minTemp)}°`;
+        summaryEl.textContent = summary;
+    }
+}
+
+/**
+ * Render historical hourly forecast
+ */
+function renderHistoricalHourlyForecast() {
+    if (!historicalData || !historicalData.hourly) {
+        console.warn('[WeatherBuster] No hourly historical data to render');
+        return;
+    }
+
+    const container = document.querySelector('#hourly-forecast .hourly-timeline');
+    if (!container) return;
+
+    const hourly = historicalData.hourly;
+    const times = hourly.time || [];
+    const temps = hourly.temperature_2m || [];
+    const feelsLike = hourly.apparent_temperature || [];
+    const precipProb = hourly.precipitation_probability || [];
+    const weatherCodes = hourly.weather_code || [];
+
+    // Build hourly data array
+    const hourlyData = [];
+
+    for (let i = 0; i < times.length && i < 24; i++) {
+        const time = new Date(times[i]);
+        const hour = time.getHours();
+        const weatherInfo = getWMOWeatherInfo(weatherCodes[i] || 0, hour);
+
+        hourlyData.push({
+            time: time,
+            temp: typeof temps[i] === 'number' ? Math.round(temps[i]) : '--',
+            feelsLike: typeof feelsLike[i] === 'number' ? Math.round(feelsLike[i]) : '--',
+            precipProb: precipProb[i] || 0,
+            icon: weatherInfo.icon,
+            condition: weatherInfo.description,
+            category: weatherInfo.category,
+            isNow: false
+        });
+    }
+
+    // Cache for re-rendering on toggle
+    hourlyDataCache = hourlyData;
+
+    // Calculate condition spans
+    const conditionSpans = calculateConditionSpans(hourlyData);
+
+    // Render the timeline
+    renderHourlyTimeline(container, hourlyData, conditionSpans);
+
+    // Update section title
+    const sectionTitle = document.querySelector('#hourly-forecast .section-title');
+    if (sectionTitle) {
+        sectionTitle.innerHTML = '24-Hour Historical <span class="hourly-precip-summary" id="hourly-precip-summary"></span>';
+    }
+}
+
+/**
+ * Set up Time Machine event listeners
+ */
+function setupTimeMachineEventListeners() {
+    const datePicker = document.getElementById('time-machine-date');
+    const goButton = document.getElementById('time-machine-go');
+    const returnButton = document.getElementById('time-machine-return');
+    const toggleButton = document.getElementById('time-machine-toggle');
+
+    // Set date picker constraints
+    if (datePicker) {
+        const range = getValidDateRange();
+        datePicker.min = range.min;
+        datePicker.max = range.max;
+
+        // Handle date selection
+        datePicker.addEventListener('change', (e) => {
+            const selectedDate = e.target.value;
+            if (selectedDate) {
+                enterTimeMachineMode(selectedDate);
+            }
+        });
+    }
+
+    // Go button click
+    if (goButton) {
+        goButton.addEventListener('click', () => {
+            const selectedDate = datePicker?.value;
+            if (selectedDate) {
+                enterTimeMachineMode(selectedDate);
+            } else {
+                showError('Please select a date');
+            }
+        });
+    }
+
+    // Return to today button
+    if (returnButton) {
+        returnButton.addEventListener('click', () => {
+            exitTimeMachineMode();
+        });
+    }
+
+    // Toggle button to show/hide date picker
+    if (toggleButton) {
+        toggleButton.addEventListener('click', () => {
+            const section = document.getElementById('time-machine-section');
+            if (section) {
+                section.classList.toggle('expanded');
+            }
+        });
+    }
+
+    console.log('[WeatherBuster] Time Machine event listeners set up');
+}
+
+// =============================================================================
 // EXPORTS (for potential module usage or testing)
 // =============================================================================
 
@@ -3427,5 +3855,16 @@ window.WeatherBuster = {
     openFullscreenRadar,
     closeFullscreenRadar,
     toggleFullscreenRadarAnimation,
-    showFullscreenRadarFrame
+    showFullscreenRadarFrame,
+    // Time Machine functions
+    getWMOWeatherInfo,
+    getValidDateRange,
+    fetchHistoricalWeather,
+    enterTimeMachineMode,
+    exitTimeMachineMode,
+    renderHistoricalConditions,
+    renderHistoricalHourlyForecast,
+    setupTimeMachineEventListeners,
+    isTimeMachineMode: () => isTimeMachineMode,
+    timeMachineDate: () => timeMachineDate
 };

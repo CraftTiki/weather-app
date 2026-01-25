@@ -4,7 +4,7 @@
     <script>
     // Cache buster - bump version when deploying updates
     (function() {
-        var version = '1.4';
+        var version = '1.5';
         var param = 'v=' + version;
         if (window.location.search.indexOf(param) === -1) {
             window.location.replace(window.location.pathname + '?' + param);
@@ -19,7 +19,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Weather Buster</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=3.4">
+    <link rel="stylesheet" href="styles.css?v=3.5">
 </head>
 <body>
 
@@ -199,7 +199,50 @@
             </div>
         </section>
 
+        <!-- Time Machine Section -->
+        <section id="time-machine-section" class="time-machine-section" aria-label="Historical weather time machine">
+            <button type="button" id="time-machine-toggle" class="time-machine-toggle" aria-expanded="false">
+                <svg class="time-machine-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span class="time-machine-label">Time Machine</span>
+                <span class="time-machine-hint">View historical weather</span>
+                <svg class="time-machine-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="time-machine-controls">
+                <div class="time-machine-picker">
+                    <label for="time-machine-date" class="time-machine-picker-label">Select a date (1940 - 3 days ago)</label>
+                    <div class="time-machine-picker-row">
+                        <input type="date" id="time-machine-date" class="time-machine-date-input" aria-label="Select historical date">
+                        <button type="button" id="time-machine-go" class="time-machine-go-btn">Go</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
+
+    <!-- Time Machine Banner (shown when in historical mode) -->
+    <div id="time-machine-banner" class="time-machine-banner" hidden aria-live="polite">
+        <div class="time-machine-banner-content">
+            <svg class="time-machine-banner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="time-machine-banner-text">Viewing historical weather for</span>
+            <span class="time-machine-banner-date">--</span>
+        </div>
+        <button type="button" id="time-machine-return" class="time-machine-return-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Return to Today
+        </button>
+    </div>
 
     <!-- Loading State -->
     <div
@@ -273,6 +316,6 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=3.2"></script>
+    <script src="app.js?v=3.3"></script>
 </body>
 </html>
