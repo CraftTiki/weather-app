@@ -1736,9 +1736,8 @@ function getConditionText(time, props) {
     switch (category) {
         case 'storm': return 'Thunderstorms';
         case 'snow': return 'Snow';
-        case 'rain':
-            if (precipProb && precipProb >= 70) return 'Rain';
-            return 'Light Rain';
+        case 'drizzle': return 'Light Rain';
+        case 'rain': return 'Rain';
         case 'fog': return 'Fog';
         case 'cloudy':
             if (skyCover > 85) return 'Overcast';
@@ -2200,8 +2199,13 @@ function render7DayForecast() {
         const avgTemp = (dayLow + dayHigh) / 2;
         const tempBarClass = getTempBarClass(avgTemp);
 
-        // Format day name: "Today" stays, others become 3-letter abbreviations
-        const dayName = day.name === 'Today' ? 'Today' : day.name.slice(0, 3);
+        // Format day name: "Today"/"This Afternoon" stays as "Today", others become 3-letter abbreviations
+        let dayName;
+        if (day.name === 'Today' || day.name.startsWith('This')) {
+            dayName = 'Today';
+        } else {
+            dayName = day.name.slice(0, 3);
+        }
 
         // Precipitation shown under day name
         const precipDisplay = day.precipChance > 0
