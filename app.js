@@ -7,6 +7,8 @@
 // CONSTANTS AND CONFIGURATION
 // =============================================================================
 
+const APP_VERSION = '1.0.0';
+
 const NWS_API_BASE = 'https://api.weather.gov';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
 const USER_AGENT = 'WeatherBuster/1.0 (personal use)';
@@ -1031,6 +1033,10 @@ async function initializeApp() {
     // Initialize DOM references
     initializeElements();
     console.log('[WeatherBuster] DOM elements initialized');
+
+    // Display version in settings
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) versionEl.textContent = `Version ${APP_VERSION}`;
 
     // Set up event listeners
     setupEventListeners();

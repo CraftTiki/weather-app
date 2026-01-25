@@ -2288,6 +2288,8 @@ input {
   z-index: 1001;
   transition: right 0.3s ease;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .settings-panel.open {
@@ -2366,6 +2368,15 @@ input {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-top: var(--spacing-xs);
+}
+
+.settings-version {
+  padding: var(--spacing-lg);
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  opacity: 0.6;
+  margin-top: auto;
 }
 
 /* Toggle Switch */
