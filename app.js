@@ -1610,7 +1610,7 @@ function getConditionText(time, props) {
         case 'snow': return 'Snow';
         case 'rain':
             if (precipProb && precipProb >= 70) return 'Rain';
-            return 'Chance of Rain';
+            return 'Light Rain';
         case 'fog': return 'Fog';
         case 'cloudy':
             if (skyCover > 85) return 'Overcast';
@@ -1842,17 +1842,25 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
         // Calculate pill width as percentage of range
         const pillWidth = range > 0 ? Math.round(((currentVal - minVal) / range) * 100) : 50;
 
+        // Detect if condition changed from previous hour
+        const prevCondition = index > 0 ? hourlyData[index - 1].condition : null;
+        const conditionChanged = hour.condition !== prevCondition;
+        const labelClass = conditionChanged ? '' : 'no-label';
+        const conditionLabel = conditionChanged ? `<span class="condition-text">${hour.condition}</span>` : '';
+
         return `
             <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
                 <div class="hourly-duration-bar condition-${hour.category}" aria-hidden="true"></div>
                 <div class="hourly-row-time ${hour.isNow ? 'now' : ''}">${timeLabel}</div>
                 <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
-                <div class="hourly-row-pill-container">
-                    <div class="hourly-pill-track">
-                        <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
-                    </div>
-                    <div class="hourly-row-value">${displayValue}</div>
+                <div class="hourly-row-condition-label ${labelClass}">
+                    ${conditionLabel}
+                    <div class="condition-line"></div>
                 </div>
+                <div class="hourly-pill-track">
+                    <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
+                </div>
+                <div class="hourly-row-value">${displayValue}</div>
             </div>
         `;
     }).join('');
@@ -2347,17 +2355,25 @@ function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode)
         // Calculate pill width as percentage of range
         const pillWidth = range > 0 ? Math.round(((currentVal - minVal) / range) * 100) : 50;
 
+        // Detect if condition changed from previous hour
+        const prevCondition = index > 0 ? hourlyData[index - 1].condition : null;
+        const conditionChanged = hour.condition !== prevCondition;
+        const labelClass = conditionChanged ? '' : 'no-label';
+        const conditionLabel = conditionChanged ? `<span class="condition-text">${hour.condition}</span>` : '';
+
         return `
             <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
                 <div class="hourly-duration-bar condition-${hour.category}" aria-hidden="true"></div>
                 <div class="hourly-row-time">${timeLabel}</div>
                 <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
-                <div class="hourly-row-pill-container">
-                    <div class="hourly-pill-track">
-                        <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
-                    </div>
-                    <div class="hourly-row-value">${displayValue}</div>
+                <div class="hourly-row-condition-label ${labelClass}">
+                    ${conditionLabel}
+                    <div class="condition-line"></div>
                 </div>
+                <div class="hourly-pill-track">
+                    <div class="hourly-pill ${pillClass}" style="width: ${pillWidth}%"></div>
+                </div>
+                <div class="hourly-row-value">${displayValue}</div>
             </div>
         `;
     }).join('');

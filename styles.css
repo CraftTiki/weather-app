@@ -985,7 +985,7 @@ input {
 /* Individual hourly row */
 .hourly-row {
   display: grid;
-  grid-template-columns: 4px 55px 24px 1fr;
+  grid-template-columns: 4px 55px 24px 115px 1fr 44px;
   align-items: center;
   gap: var(--spacing-xs);
   padding: 6px var(--spacing-sm) 6px 0;
@@ -1111,6 +1111,49 @@ input {
   border-radius: 4px;
   transition: width 0.3s ease, background-color 0.3s ease;
   min-width: 4px;
+}
+
+/* Condition label + connecting line */
+.hourly-row-condition-label {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 60px;
+  overflow: hidden;
+  padding-left: 6px;
+}
+
+.condition-text {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-right: 8px;
+}
+
+.condition-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--text-light);
+  min-width: 8px;
+}
+
+/* When no condition label, show a subtler solid line */
+.hourly-row-condition-label.no-label .condition-line {
+  background-color: rgba(128, 128, 128, 0.25);
+}
+
+[data-theme="dark"] .condition-text {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .condition-line {
+  background-color: var(--text-light);
+}
+
+[data-theme="dark"] .hourly-row-condition-label.no-label .condition-line {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Value label to the right of the bar */
@@ -1283,7 +1326,7 @@ input {
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .hourly-row {
-    grid-template-columns: 4px 40px 20px 1fr;
+    grid-template-columns: 4px 40px 20px 95px 1fr 38px;
     gap: 4px;
     padding: 4px var(--spacing-xs) 4px 0;
     min-height: 32px;
@@ -1302,12 +1345,22 @@ input {
     font-size: 1rem;
   }
 
+  .condition-text {
+    font-size: 0.65rem;
+    padding-right: 4px;
+  }
+
+  .condition-line {
+    min-width: 10px;
+  }
+
   .hourly-pill-track {
     height: 6px;
   }
 
   .hourly-row-value {
     font-size: 0.8rem;
+    min-width: 38px;
   }
 
   .hourly-toggles {
