@@ -2735,7 +2735,11 @@ async function initializeRadarLayer() {
  */
 async function fetchRadarFrames() {
     try {
-        const response = await fetch(RAINVIEWER_API);
+        // Add cache-busting parameter and no-cache headers to ensure fresh radar data
+        const cacheBuster = `?_=${Date.now()}`;
+        const response = await fetch(RAINVIEWER_API + cacheBuster, {
+            cache: 'no-store'
+        });
         if (!response.ok) throw new Error('Failed to fetch radar data');
 
         const data = await response.json();
