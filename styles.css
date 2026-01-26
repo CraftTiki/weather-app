@@ -817,6 +817,13 @@ input {
   line-height: 1;
 }
 
+/* Constrain SVG icons in hero section */
+.hero-icon svg {
+  width: 4rem;
+  height: 4rem;
+  max-width: 100%;
+}
+
 /* SVG weather icons (fog, etc.) */
 .weather-icon-svg {
   width: 1em;
@@ -1934,6 +1941,11 @@ input {
     font-size: 3rem;
   }
 
+  .hero-icon svg {
+    width: 3rem;
+    height: 3rem;
+  }
+
   .hero-temp {
     font-size: 4rem;
   }
@@ -2118,6 +2130,11 @@ input {
     font-size: 5rem;
   }
 
+  .hero-icon svg {
+    width: 5rem;
+    height: 5rem;
+  }
+
   .hero-temp {
     font-size: 6rem;
   }
@@ -2203,6 +2220,11 @@ input {
 
   .hero-icon {
     font-size: 6rem;
+  }
+
+  .hero-icon svg {
+    width: 6rem;
+    height: 6rem;
   }
 
   .hero-temp {
