@@ -7,7 +7,7 @@
 // CONSTANTS AND CONFIGURATION
 // =============================================================================
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 const NWS_API_BASE = 'https://api.weather.gov';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
@@ -95,6 +95,23 @@ const INTENSITY_CODES = {
     'HV': 'Heavy',
     'MD': 'Moderate'
 };
+
+// =============================================================================
+// SECURITY UTILITIES
+// =============================================================================
+
+/**
+ * Escape HTML special characters to prevent XSS attacks
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for innerHTML
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const text = String(str);
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // =============================================================================
 // STATE MANAGEMENT
@@ -916,10 +933,11 @@ function setupSettingsEventListeners() {
     }
 
 
-    // Close settings with Escape key
+    // Close settings and alert modal with Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeSettings();
+            closeAlertModal();
         }
     });
 }
@@ -1065,7 +1083,7 @@ function showAutocompleteSuggestions(suggestions, query = '') {
         if (suggestionsHeader) suggestionsHeader.style.display = 'none';
         suggestionsList.innerHTML = `
             <li class="autocomplete-no-results">
-                <span>No results for "${query}"</span>
+                <span>No results for "${escapeHtml(query)}"</span>
             </li>
         `;
         dropdown.removeAttribute('hidden');
@@ -1080,7 +1098,7 @@ function showAutocompleteSuggestions(suggestions, query = '') {
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                 <circle cx="12" cy="10" r="3"></circle>
             </svg>
-            <span class="autocomplete-text">${loc.displayName}</span>
+            <span class="autocomplete-text">${escapeHtml(loc.displayName)}</span>
         </li>
     `).join('');
 
@@ -1154,7 +1172,7 @@ function showSearchDropdown() {
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-                <span class="recent-location-text">${loc.name}</span>
+                <span class="recent-location-text">${escapeHtml(loc.name)}</span>
                 <button type="button" class="recent-location-remove" data-index="${index}" aria-label="Remove from recents">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1980,13 +1998,14 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
         const prevCondition = index > 0 ? hourlyData[index - 1].condition : null;
         const conditionChanged = hour.condition !== prevCondition;
         const labelClass = conditionChanged ? '' : 'no-label';
-        const conditionLabel = conditionChanged ? `<span class="condition-text">${hour.condition}</span>` : '';
+        const escapedCondition = escapeHtml(hour.condition);
+        const conditionLabel = conditionChanged ? `<span class="condition-text">${escapedCondition}</span>` : '';
 
         return `
-            <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
-                <div class="hourly-duration-bar condition-${hour.category}" aria-hidden="true"></div>
+            <div class="hourly-row ${spanClass}" role="listitem" title="${escapedCondition}">
+                <div class="hourly-duration-bar condition-${escapeHtml(hour.category)}" aria-hidden="true"></div>
                 <div class="hourly-row-time ${hour.isNow ? 'now' : ''}">${timeLabel}</div>
-                <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
+                <div class="hourly-row-icon" aria-label="${escapedCondition}">${hour.icon}</div>
                 <div class="hourly-row-condition-label ${labelClass}">
                     ${conditionLabel}
                     <div class="condition-line"></div>
@@ -2511,13 +2530,14 @@ function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode)
         const prevCondition = index > 0 ? hourlyData[index - 1].condition : null;
         const conditionChanged = hour.condition !== prevCondition;
         const labelClass = conditionChanged ? '' : 'no-label';
-        const conditionLabel = conditionChanged ? `<span class="condition-text">${hour.condition}</span>` : '';
+        const escapedCondition = escapeHtml(hour.condition);
+        const conditionLabel = conditionChanged ? `<span class="condition-text">${escapedCondition}</span>` : '';
 
         return `
-            <div class="hourly-row ${spanClass}" role="listitem" title="${hour.condition}">
-                <div class="hourly-duration-bar condition-${hour.category}" aria-hidden="true"></div>
+            <div class="hourly-row ${spanClass}" role="listitem" title="${escapedCondition}">
+                <div class="hourly-duration-bar condition-${escapeHtml(hour.category)}" aria-hidden="true"></div>
                 <div class="hourly-row-time">${timeLabel}</div>
-                <div class="hourly-row-icon" aria-label="${hour.condition}">${hour.icon}</div>
+                <div class="hourly-row-icon" aria-label="${escapedCondition}">${hour.icon}</div>
                 <div class="hourly-row-condition-label ${labelClass}">
                     ${conditionLabel}
                     <div class="condition-line"></div>
@@ -2562,15 +2582,18 @@ function renderAlerts() {
         if (props.severity === 'Extreme' || props.severity === 'Severe') {
             badgeClass = 'alert-badge-warning';
             icon = '⚠️';
-        } else if (props.event.toLowerCase().includes('watch')) {
+        } else if (props.event && props.event.toLowerCase().includes('watch')) {
             badgeClass = 'alert-badge-watch';
             icon = '👁️';
         }
 
+        const escapedEvent = escapeHtml(props.event);
+        const escapedHeadline = escapeHtml(props.headline || props.event);
+
         return `
-            <span class="alert-badge ${badgeClass}" role="alert" data-index="${index}" title="${props.headline || props.event}">
+            <span class="alert-badge ${badgeClass}" role="alert" data-index="${index}" title="${escapedHeadline}">
                 <span class="alert-badge-icon" aria-hidden="true">${icon}</span>
-                <span class="alert-badge-text">${props.event}</span>
+                <span class="alert-badge-text">${escapedEvent}</span>
             </span>
         `;
     }).join('');
@@ -2591,11 +2614,19 @@ function renderAlerts() {
 }
 
 /**
- * Show alert details in a modal/expanded view
+ * Show alert details in a custom modal
  * @param {Object} props - Alert properties
  */
 function showAlertModal(props) {
-    // For now, use a simple alert. Can be upgraded to a modal later.
+    const modal = document.getElementById('alert-modal');
+    const titleEl = document.getElementById('alert-modal-title');
+    const headlineEl = document.getElementById('alert-modal-headline');
+    const expiresEl = document.getElementById('alert-modal-expires');
+    const descriptionEl = document.getElementById('alert-modal-description');
+
+    if (!modal) return;
+
+    // Format expiration time
     const expires = props.expires ? new Date(props.expires).toLocaleString('en-US', {
         weekday: 'short',
         month: 'short',
@@ -2604,8 +2635,52 @@ function showAlertModal(props) {
         minute: '2-digit'
     }) : 'Unknown';
 
-    const message = `${props.event}\n\n${props.headline || ''}\n\nExpires: ${expires}\n\n${props.description || ''}`;
-    alert(message);
+    // Populate modal content using textContent for security
+    if (titleEl) titleEl.textContent = props.event || 'Weather Alert';
+    if (headlineEl) headlineEl.textContent = props.headline || '';
+    if (expiresEl) expiresEl.textContent = `Expires: ${expires}`;
+    if (descriptionEl) descriptionEl.textContent = props.description || '';
+
+    // Show modal
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    // Set up close handlers
+    setupAlertModalCloseHandlers();
+}
+
+/**
+ * Close the alert modal
+ */
+function closeAlertModal() {
+    const modal = document.getElementById('alert-modal');
+    if (!modal) return;
+
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+/**
+ * Set up alert modal close handlers
+ */
+function setupAlertModalCloseHandlers() {
+    const modal = document.getElementById('alert-modal');
+    const closeBtn = document.getElementById('alert-modal-close');
+    const backdrop = modal?.querySelector('.alert-modal-backdrop');
+
+    // Close button
+    if (closeBtn) {
+        closeBtn.onclick = closeAlertModal;
+    }
+
+    // Backdrop click
+    if (backdrop) {
+        backdrop.onclick = closeAlertModal;
+    }
+
+    // Escape key (handled by existing document keydown listener)
 }
 
 /**
@@ -3916,8 +3991,11 @@ window.WeatherBuster = {
     renderDayChartTimeline,
     renderAlerts,
     showAlertModal,
+    closeAlertModal,
+    setupAlertModalCloseHandlers,
     toggleAlertDetails,
     toggleAlertExpand,
+    escapeHtml,
     // Map functions
     initializeMap,
     handleMapClick,
