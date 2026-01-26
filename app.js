@@ -29,14 +29,17 @@ const RAINVIEWER_TILE_URL = 'https://tilecache.rainviewer.com{path}/256/{z}/{x}/
 // Open-Meteo Historical Weather API
 const OPEN_METEO_HISTORICAL_API = 'https://archive-api.open-meteo.com/v1/archive';
 
+// SVG Icons
+const FOG_ICON_SVG = '<svg class="weather-icon-svg" viewBox="0 0 24 24" fill="none"><path d="M2 7 Q6 5, 12 7 T22 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/><path d="M2 12 Q6 10, 12 12 T22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.7"/><path d="M2 17 Q6 15, 12 17 T22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg>';
+
 // WMO Weather Codes mapping (used by Open-Meteo)
 const WMO_WEATHER_CODES = {
     0: { description: 'Clear sky', icon: { day: '☀️', night: '🌙' }, category: 'clear' },
     1: { description: 'Mainly clear', icon: { day: '🌤️', night: '🌙' }, category: 'clear' },
     2: { description: 'Partly cloudy', icon: { day: '⛅', night: '☁️' }, category: 'cloudy' },
     3: { description: 'Overcast', icon: { day: '☁️', night: '☁️' }, category: 'cloudy' },
-    45: { description: 'Fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
-    48: { description: 'Depositing rime fog', icon: { day: '🌫️', night: '🌫️' }, category: 'fog' },
+    45: { description: 'Fog', icon: { day: FOG_ICON_SVG, night: FOG_ICON_SVG }, category: 'fog' },
+    48: { description: 'Depositing rime fog', icon: { day: FOG_ICON_SVG, night: FOG_ICON_SVG }, category: 'fog' },
     51: { description: 'Light drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     53: { description: 'Moderate drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'drizzle' },
     55: { description: 'Dense drizzle', icon: { day: '🌧️', night: '🌧️' }, category: 'rain' },
@@ -1326,7 +1329,7 @@ function getWeatherIcon(conditions, isDaytime) {
     if (condLower.includes('thunder') || condLower.includes('storm')) return '⛈️';
     if (condLower.includes('rain') || condLower.includes('shower')) return '🌧️';
     if (condLower.includes('snow')) return '🌨️';
-    if (condLower.includes('fog') || condLower.includes('mist')) return '🌫️';
+    if (condLower.includes('fog') || condLower.includes('mist')) return FOG_ICON_SVG;
     if (condLower.includes('cloud') || condLower.includes('overcast')) return isDaytime ? '⛅' : '☁️';
     if (condLower.includes('partly')) return isDaytime ? '🌤️' : '☁️';
     if (condLower.includes('clear') || condLower.includes('sunny')) return isDaytime ? '☀️' : '🌙';
@@ -1432,7 +1435,7 @@ function renderCurrentConditions() {
     if (heroIcon) {
         const hour = new Date().getHours();
         const isDaytime = hour >= 6 && hour < 20;
-        heroIcon.textContent = getWeatherIcon(forecast.shortForecast, isDaytime);
+        heroIcon.innerHTML = getWeatherIcon(forecast.shortForecast, isDaytime);
     }
 
     // Feels like (apparent temperature)
@@ -1619,7 +1622,7 @@ function getHourlyWeatherIcon(time, props) {
     if (hasThunder) return '⛈️';
     if (hasSnow) return '🌨️';
     if (hasRain || (precipProb && precipProb > 50)) return '🌧️';
-    if (hasFog) return '🌫️';
+    if (hasFog) return FOG_ICON_SVG;
 
     // Cloud cover based icons
     if (skyCover !== null) {
@@ -3727,7 +3730,7 @@ function renderHistoricalConditions() {
     // Update hero icon
     const heroIcon = document.getElementById('hero-icon');
     if (heroIcon) {
-        heroIcon.textContent = weatherInfo.icon;
+        heroIcon.innerHTML = weatherInfo.icon;
     }
 
     // Update feels like (use apparent temperature from noon if available)

@@ -817,6 +817,14 @@ input {
   line-height: 1;
 }
 
+/* SVG weather icons (fog, etc.) */
+.weather-icon-svg {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.1em;
+  color: #9ca3af;
+}
+
 .hero-temp-group {
   display: flex;
   align-items: flex-start;
