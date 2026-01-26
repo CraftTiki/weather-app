@@ -2451,7 +2451,7 @@ function render7DayForecast() {
                     <button type="button" class="hourly-toggle active" data-view="temp" data-day="${index}" role="tab" aria-selected="true">TEMP</button>
                     <button type="button" class="hourly-toggle" data-view="feels" data-day="${index}" role="tab" aria-selected="false">FEELS</button>
                     <button type="button" class="hourly-toggle" data-view="precip" data-day="${index}" role="tab" aria-selected="false">PRECIP</button>
-                    <button type="button" class="hourly-toggle" data-view="wind" data-day="${index}" role="tab" aria-selected="false">WIND</button>
+                    <button type="button" class="hourly-toggle" data-view="wind" data-day="${index}" role="tab" aria-selected="false">WIND (MPH)</button>
                 </div>
                 <div class="daily-chart-rain-total" id="daily-rain-${index}"></div>
             </div>
