@@ -1649,8 +1649,27 @@ input {
   color: var(--text-light);
 }
 
-.daily-chart-rain-total .rain-icon {
-  margin-right: 2px;
+/* Hourly section info footer (rain total + sunrise/sunset) */
+.hourly-info-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.hourly-rain-total,
+.hourly-sun-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="dark"] .hourly-info-footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Dark mode adjustments */

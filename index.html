@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Weather Buster - Get current conditions, hourly and weekly forecasts for any location">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' https://*.tile.openstreetmap.org https://tilecache.rainviewer.com data:; connect-src 'self' https://api.weather.gov https://nominatim.openstreetmap.org https://api.rainviewer.com https://archive-api.open-meteo.com https://ipapi.co https://photon.komoot.io; font-src 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' https://*.tile.openstreetmap.org https://tilecache.rainviewer.com data:; connect-src 'self' https://api.weather.gov https://nominatim.openstreetmap.org https://api.rainviewer.com https://archive-api.open-meteo.com https://ipapi.co https://photon.komoot.io https://api.sunrise-sunset.org; font-src 'self'">
     <meta name="theme-color" content="#1e88e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Weather Buster</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-    <link rel="stylesheet" href="styles.css?v=4.2">
+    <link rel="stylesheet" href="styles.css?v=4.3">
 </head>
 <body>
 
@@ -183,6 +183,7 @@
                     WIND (MPH)
                 </button>
             </div>
+            <div class="hourly-info-footer" id="hourly-info-footer"></div>
         </section>
 
         <!-- 7-Day Forecast Section -->
@@ -326,6 +327,6 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=4.9"></script>
+    <script src="app.js?v=5.4"></script>
 </body>
 </html>

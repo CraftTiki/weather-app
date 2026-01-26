@@ -2008,6 +2008,9 @@ function renderHourlyForecast() {
     // Render 12-hour precipitation summary
     renderHourlyPrecipSummary();
 
+    // Render info footer (rain total + sunrise/sunset)
+    renderHourlyInfoFooter();
+
     // Set up toggle button listeners
     setupHourlyToggles();
 }
@@ -2030,6 +2033,124 @@ function renderHourlyPrecipSummary() {
     } else {
         summaryEl.style.display = 'none';
     }
+}
+
+/**
+ * Fetch sunrise and sunset times from sunrise-sunset.org API
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {Promise<{sunrise: Date, sunset: Date, tomorrowSunrise: Date}|null>}
+ */
+async function fetchSunTimes(lat, lon) {
+    try {
+        // Fetch today's times
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+        const [todayRes, tomorrowRes] = await Promise.all([
+            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${today}&formatted=0`),
+            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${tomorrow}&formatted=0`)
+        ]);
+
+        const todayData = await todayRes.json();
+        const tomorrowData = await tomorrowRes.json();
+
+        if (todayData.status !== 'OK' || tomorrowData.status !== 'OK') {
+            return null;
+        }
+
+        return {
+            sunrise: new Date(todayData.results.sunrise),
+            sunset: new Date(todayData.results.sunset),
+            tomorrowSunrise: new Date(tomorrowData.results.sunrise)
+        };
+    } catch (error) {
+        console.error('Failed to fetch sun times:', error);
+        return null;
+    }
+}
+
+// Cache for sun times to avoid repeated API calls
+let sunTimesCache = null;
+let sunTimesCacheKey = null;
+
+/**
+ * Format time remaining until an event as fractional hours
+ * @param {number} minutes - Minutes until event
+ * @returns {string} Formatted string like "6 3/4 hours"
+ */
+function formatTimeRemaining(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    // Convert to nearest quarter using proper fraction symbols
+    const quarters = Math.round(remainingMinutes / 15);
+    const fractions = ['', '¼', '½', '¾', ''];
+
+    if (quarters === 0 || quarters === 4) {
+        const adjustedHours = quarters === 4 ? hours + 1 : hours;
+        return adjustedHours === 1 ? '1 hour' : `${adjustedHours} hours`;
+    }
+
+    if (hours === 0) {
+        return `${fractions[quarters]} hour`;
+    }
+
+    return `${hours}${fractions[quarters]} hours`;
+}
+
+/**
+ * Render the hourly section info footer (rain total + sunrise/sunset)
+ */
+async function renderHourlyInfoFooter() {
+    const footerEl = document.getElementById('hourly-info-footer');
+    if (!footerEl) return;
+
+    // Get rain total for next 12 hours
+    const precip = get12HourPrecip();
+    const rainFormatted = precip.amount >= 0.01
+        ? precip.amount.toFixed(2).replace(/\.?0+$/, '')
+        : '0';
+
+    // Get sunrise/sunset info
+    let sunInfo = '';
+    if (currentLocation?.latitude && currentLocation?.longitude) {
+        // Check cache - use cached data if same location and less than 1 hour old
+        const cacheKey = `${currentLocation.latitude.toFixed(2)},${currentLocation.longitude.toFixed(2)}`;
+        const now = new Date();
+
+        if (!sunTimesCache || sunTimesCacheKey !== cacheKey) {
+            sunTimesCache = await fetchSunTimes(currentLocation.latitude, currentLocation.longitude);
+            sunTimesCacheKey = cacheKey;
+        }
+
+        if (sunTimesCache) {
+            const { sunrise, sunset, tomorrowSunrise } = sunTimesCache;
+
+            // Determine which event to show
+            if (now < sunrise) {
+                // Before sunrise - show sunrise
+                const minutesUntil = Math.round((sunrise - now) / 60000);
+                const timeStr = sunrise.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                sunInfo = `Sunrise in ${formatTimeRemaining(minutesUntil)} (${timeStr})`;
+            } else if (now < sunset) {
+                // After sunrise, before sunset - show sunset
+                const minutesUntil = Math.round((sunset - now) / 60000);
+                const timeStr = sunset.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                sunInfo = `Sunset in ${formatTimeRemaining(minutesUntil)} (${timeStr})`;
+            } else {
+                // After sunset - show tomorrow's sunrise
+                const minutesUntil = Math.round((tomorrowSunrise - now) / 60000);
+                const timeStr = tomorrowSunrise.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                sunInfo = `Sunrise in ${formatTimeRemaining(minutesUntil)} (${timeStr})`;
+            }
+        }
+    }
+
+    footerEl.innerHTML = `
+        <span class="hourly-rain-total">Rain: ${rainFormatted} in.</span>
+        <span class="hourly-sun-info">${sunInfo}</span>
+    `;
 }
 
 /**
@@ -2668,7 +2789,7 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
         const formatted = rainInches > 0
             ? rainInches.toFixed(2).replace(/\.?0+$/, '')
             : '0';
-        rainTotalContainer.innerHTML = `<span class="rain-icon">💧</span> Rain: ${formatted} in.`;
+        rainTotalContainer.innerHTML = `Rain: ${formatted} in.`;
         rainTotalContainer.style.display = 'block';
     }
 }
