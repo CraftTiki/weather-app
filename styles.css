@@ -1640,18 +1640,10 @@ input {
   border-top: 1px solid rgba(128, 128, 128, 0.1);
 }
 
-/* Rain total display below toggles */
-.daily-chart-rain-total {
+/* Info footer (rain total + sunrise/sunset) - shared by hourly and daily */
+.hourly-info-footer,
+.daily-info-footer {
   display: none;
-  text-align: center;
-  margin-top: var(--spacing-sm);
-  font-size: 0.85rem;
-  color: var(--text-light);
-}
-
-/* Hourly section info footer (rain total + sunrise/sunset) */
-.hourly-info-footer {
-  display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: var(--spacing-sm);
@@ -1661,14 +1653,21 @@ input {
   color: var(--text-light);
 }
 
+.hourly-info-footer {
+  display: flex;
+}
+
 .hourly-rain-total,
-.hourly-sun-info {
+.hourly-sun-info,
+.daily-rain-total,
+.daily-sun-info {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-[data-theme="dark"] .hourly-info-footer {
+[data-theme="dark"] .hourly-info-footer,
+[data-theme="dark"] .daily-info-footer {
   border-top-color: rgba(255, 255, 255, 0.08);
 }
 

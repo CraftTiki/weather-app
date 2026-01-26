@@ -2036,34 +2036,50 @@ function renderHourlyPrecipSummary() {
 }
 
 /**
- * Fetch sunrise and sunset times from sunrise-sunset.org API
+ * Fetch sunrise and sunset times from sunrise-sunset.org API for multiple days
  * @param {number} lat - Latitude
  * @param {number} lon - Longitude
- * @returns {Promise<{sunrise: Date, sunset: Date, tomorrowSunrise: Date}|null>}
+ * @returns {Promise<Object|null>} Object keyed by date string (YYYY-MM-DD) with sunrise/sunset Date objects
  */
 async function fetchSunTimes(lat, lon) {
     try {
-        // Fetch today's times
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-        const [todayRes, tomorrowRes] = await Promise.all([
-            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${today}&formatted=0`),
-            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${tomorrow}&formatted=0`)
-        ]);
-
-        const todayData = await todayRes.json();
-        const tomorrowData = await tomorrowRes.json();
-
-        if (todayData.status !== 'OK' || tomorrowData.status !== 'OK') {
-            return null;
+        // Fetch 8 days (today + 7 day forecast)
+        const dates = [];
+        for (let i = 0; i < 8; i++) {
+            const d = new Date(Date.now() + i * 86400000);
+            dates.push(d.toISOString().split('T')[0]);
         }
 
-        return {
-            sunrise: new Date(todayData.results.sunrise),
-            sunset: new Date(todayData.results.sunset),
-            tomorrowSunrise: new Date(tomorrowData.results.sunrise)
-        };
+        const responses = await Promise.all(
+            dates.map(date =>
+                fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${date}&formatted=0`)
+            )
+        );
+
+        const results = await Promise.all(responses.map(r => r.json()));
+
+        const sunData = {};
+        for (let i = 0; i < dates.length; i++) {
+            if (results[i].status === 'OK') {
+                sunData[dates[i]] = {
+                    sunrise: new Date(results[i].results.sunrise),
+                    sunset: new Date(results[i].results.sunset)
+                };
+            }
+        }
+
+        // Also store today and tomorrow for the hourly section
+        const today = dates[0];
+        const tomorrow = dates[1];
+        if (sunData[today] && sunData[tomorrow]) {
+            sunData.today = {
+                sunrise: sunData[today].sunrise,
+                sunset: sunData[today].sunset,
+                tomorrowSunrise: sunData[tomorrow].sunrise
+            };
+        }
+
+        return sunData;
     } catch (error) {
         console.error('Failed to fetch sun times:', error);
         return null;
@@ -2124,8 +2140,8 @@ async function renderHourlyInfoFooter() {
             sunTimesCacheKey = cacheKey;
         }
 
-        if (sunTimesCache) {
-            const { sunrise, sunset, tomorrowSunrise } = sunTimesCache;
+        if (sunTimesCache?.today) {
+            const { sunrise, sunset, tomorrowSunrise } = sunTimesCache.today;
 
             // Determine which event to show
             if (now < sunrise) {
@@ -2574,7 +2590,7 @@ function render7DayForecast() {
                     <button type="button" class="hourly-toggle" data-view="precip" data-day="${index}" role="tab" aria-selected="false">PRECIP</button>
                     <button type="button" class="hourly-toggle" data-view="wind" data-day="${index}" role="tab" aria-selected="false">WIND (MPH)</button>
                 </div>
-                <div class="daily-chart-rain-total" id="daily-rain-${index}"></div>
+                <div class="daily-info-footer" id="daily-info-${index}"></div>
             </div>
         </div>
     `}).join('');
@@ -2781,16 +2797,30 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
     // Render the chart using the day's view mode
     renderDayChartTimeline(chartContainer, hourlyData, conditionSpans, dailyViewModes[dayIndex]);
 
-    // Display total rain amount for the day
-    const rainTotalContainer = document.querySelector(`#daily-rain-${dayIndex}`);
-    if (rainTotalContainer) {
+    // Display total rain amount and sun times for the day
+    const infoFooter = document.querySelector(`#daily-info-${dayIndex}`);
+    if (infoFooter) {
         const rainInches = getDayPrecipAmount(dayDateStr);
         // Format to 2 decimal places, but trim trailing zeros (show "0" for zero)
-        const formatted = rainInches > 0
+        const rainFormatted = rainInches > 0
             ? rainInches.toFixed(2).replace(/\.?0+$/, '')
             : '0';
-        rainTotalContainer.innerHTML = `Rain: ${formatted} in.`;
-        rainTotalContainer.style.display = 'block';
+
+        // Get sun times for this day
+        let sunInfo = '';
+        const dateKey = dayDateStr.split('T')[0]; // Extract YYYY-MM-DD from ISO string
+        if (sunTimesCache && sunTimesCache[dateKey]) {
+            const { sunrise, sunset } = sunTimesCache[dateKey];
+            const sunriseStr = sunrise.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const sunsetStr = sunset.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            sunInfo = `Sunrise ${sunriseStr} · Sunset ${sunsetStr}`;
+        }
+
+        infoFooter.innerHTML = `
+            <span class="daily-rain-total">Rain: ${rainFormatted} in.</span>
+            <span class="daily-sun-info">${sunInfo}</span>
+        `;
+        infoFooter.style.display = 'flex';
     }
 }
 
