@@ -7,7 +7,7 @@
 // CONSTANTS AND CONFIGURATION
 // =============================================================================
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 const NWS_API_BASE = 'https://api.weather.gov';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
@@ -31,6 +31,8 @@ const OPEN_METEO_HISTORICAL_API = 'https://archive-api.open-meteo.com/v1/archive
 
 // SVG Icons
 const FOG_ICON_SVG = '<svg class="weather-icon-svg" viewBox="0 0 24 24" fill="none"><path d="M2 7 Q6 5, 12 7 T22 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/><path d="M2 12 Q6 10, 12 12 T22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.7"/><path d="M2 17 Q6 15, 12 17 T22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg>';
+
+const WIND_ICON_SVG = '<svg class="weather-icon-svg" viewBox="0 0 24 24" fill="none"><path d="M2 12h13a3 3 0 1 0-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 6h8a2 2 0 1 1 2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><path d="M2 18h10a2.5 2.5 0 1 0-2.5-2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg>';
 
 // WMO Weather Codes mapping (used by Open-Meteo)
 const WMO_WEATHER_CODES = {
@@ -1347,6 +1349,7 @@ function getWeatherIcon(conditions, isDaytime) {
     if (condLower.includes('thunder') || condLower.includes('storm')) return '⛈️';
     if (condLower.includes('rain') || condLower.includes('shower')) return '🌧️';
     if (condLower.includes('snow')) return '🌨️';
+    if (condLower.includes('windy') || condLower.includes('wind')) return WIND_ICON_SVG;
     if (condLower.includes('fog') || condLower.includes('mist')) return FOG_ICON_SVG;
     if (condLower.includes('cloud') || condLower.includes('overcast')) return isDaytime ? '⛅' : '☁️';
     if (condLower.includes('partly')) return isDaytime ? '🌤️' : '☁️';
@@ -1448,12 +1451,27 @@ function renderCurrentConditions() {
     // Update hero temperature
     document.getElementById('current-temp').textContent = Math.round(temp);
 
+    // Get current wind speed and direction
+    const windSpeedRaw = getCurrentValue(gridpoint?.windSpeed);
+    const windSpeed = parseWindSpeed(windSpeedRaw);
+    const windDirection = getCurrentValue(gridpoint?.windDirection);
+    const isWindy = windSpeed >= 15;
+
+    // Check if there's precipitation (precip takes priority over wind)
+    const precipProb = getCurrentValue(gridpoint?.probabilityOfPrecipitation);
+    const hasPrecip = precipProb && precipProb > 30;
+
     // Update hero icon
     const heroIcon = document.getElementById('hero-icon');
     if (heroIcon) {
         const hour = new Date().getHours();
         const isDaytime = hour >= 6 && hour < 20;
-        heroIcon.innerHTML = getWeatherIcon(forecast.shortForecast, isDaytime);
+        // Show wind icon if windy and no significant precipitation
+        if (isWindy && !hasPrecip) {
+            heroIcon.innerHTML = WIND_ICON_SVG;
+        } else {
+            heroIcon.innerHTML = getWeatherIcon(forecast.shortForecast, isDaytime);
+        }
     }
 
     // Feels like (apparent temperature)
@@ -1462,6 +1480,25 @@ function renderCurrentConditions() {
         feelsLike = Math.round(feelsLike * 9/5 + 32);
     }
     document.getElementById('feels-like').textContent = feelsLike !== null ? Math.round(feelsLike) : '--';
+
+    // Show wind info if windy
+    const windInfoEl = document.getElementById('hero-wind-info');
+    if (windInfoEl) {
+        if (isWindy) {
+            // Format direction (convert degrees to cardinal if needed)
+            let dirStr = '';
+            if (typeof windDirection === 'number') {
+                const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const idx = Math.round(windDirection / 45) % 8;
+                dirStr = cardinals[idx];
+            } else if (windDirection) {
+                dirStr = windDirection;
+            }
+            windInfoEl.innerHTML = ` · ${windSpeed} mph ${dirStr}`;
+        } else {
+            windInfoEl.innerHTML = '';
+        }
+    }
 
     // Generate hyperlocal precipitation summary
     renderPrecipitationSummary(gridpoint);
@@ -1636,10 +1673,16 @@ function getHourlyWeatherIcon(time, props) {
         w?.weather?.toLowerCase().includes('mist')
     );
 
+    // Check wind conditions
+    const windSpeedRaw = getValueAtTime(props.windSpeed, time);
+    const windSpeed = parseWindSpeed(windSpeedRaw);
+    const isWindy = windSpeed >= 15;
+
     // Determine icon based on conditions
     if (hasThunder) return '⛈️';
     if (hasSnow) return '🌨️';
     if (hasRain || (precipProb && precipProb > 50)) return '🌧️';
+    if (isWindy) return WIND_ICON_SVG;
     if (hasFog) return FOG_ICON_SVG;
 
     // Cloud cover based icons
@@ -1654,7 +1697,7 @@ function getHourlyWeatherIcon(time, props) {
 }
 
 /**
- * Current hourly view mode ('temp', 'feels', 'precip')
+ * Current hourly view mode ('temp', 'feels', 'precip', 'wind')
  */
 let hourlyViewMode = 'temp';
 
@@ -1664,10 +1707,66 @@ let hourlyViewMode = 'temp';
 let hourlyDataCache = null;
 
 /**
+ * Get wind arrow SVG for directional display
+ * @param {string|number} direction - Wind direction (cardinal like "NW" or degrees)
+ * @returns {string} SVG string for wind arrow
+ */
+function getWindArrowSvg(direction) {
+    // Convert cardinal direction to degrees (direction wind is coming FROM)
+    // Arrow should point in direction wind is blowing TO
+    const cardinalToDegrees = {
+        'N': 180, 'NNE': 202.5, 'NE': 225, 'ENE': 247.5,
+        'E': 270, 'ESE': 292.5, 'SE': 315, 'SSE': 337.5,
+        'S': 0, 'SSW': 22.5, 'SW': 45, 'WSW': 67.5,
+        'W': 90, 'WNW': 112.5, 'NW': 135, 'NNW': 157.5
+    };
+
+    let degrees = 0;
+    if (typeof direction === 'number') {
+        // Wind comes FROM this direction, arrow points opposite (TO direction)
+        degrees = (direction + 180) % 360;
+    } else if (typeof direction === 'string') {
+        const cleaned = direction.toUpperCase().trim();
+        degrees = cardinalToDegrees[cleaned] ?? 0;
+    }
+
+    return `<svg class="wind-arrow" width="14" height="14" viewBox="0 0 24 24" style="transform: rotate(${degrees}deg)">
+        <path d="M12 2L8 10h3v12h2V10h3L12 2z" fill="currentColor"/>
+    </svg>`;
+}
+
+/**
+ * Parse wind speed from NWS format and convert to mph
+ * NWS gridpoint data returns wind speed in km/h as numeric values
+ * @param {string|number} windVal - Wind speed value (km/h numeric or string like "10 mph")
+ * @returns {number} Wind speed in mph
+ */
+function parseWindSpeed(windVal) {
+    if (!windVal && windVal !== 0) return 0;
+
+    // If it's a number, assume it's km/h from NWS gridpoint data and convert to mph
+    if (typeof windVal === 'number') {
+        return Math.round(windVal * 0.621371);
+    }
+
+    // Handle string formats (e.g., from forecast text)
+    const windStr = String(windVal);
+
+    // Handle "5 to 10 mph" format - take the higher value
+    const rangeMatch = windStr.match(/(\d+)\s*to\s*(\d+)/i);
+    if (rangeMatch) {
+        return parseInt(rangeMatch[2]);
+    }
+    // Handle simple "10 mph" format
+    const simpleMatch = windStr.match(/(\d+)/);
+    return simpleMatch ? parseInt(simpleMatch[1]) : 0;
+}
+
+/**
  * Get condition category for duration bar coloring
  * @param {Date} time - Time to check
  * @param {Object} props - Gridpoint properties
- * @returns {string} Condition category (rain, snow, storm, cloudy, clear, fog)
+ * @returns {string} Condition category (rain, snow, storm, windy, cloudy, clear, fog)
  */
 function getConditionCategory(time, props) {
     // Helper to get value at specific time
@@ -1724,6 +1823,11 @@ function getConditionCategory(time, props) {
     }
     if (precipProb && precipProb > 50) return 'drizzle'; // Chance of precip but no specific type
 
+    // Check for windy conditions (after precip, before fog/clouds)
+    const windSpeedRaw = getValueAtTime(props.windSpeed, time);
+    const windSpeed = parseWindSpeed(windSpeedRaw);
+    if (windSpeed >= 15) return 'windy';
+
     if (hasFog) return 'fog';
     if (skyCover !== null && skyCover > 60) return 'cloudy';
     return 'clear';
@@ -1763,6 +1867,7 @@ function getConditionText(time, props) {
         case 'snow': return 'Snow';
         case 'drizzle': return 'Light Rain';
         case 'rain': return 'Rain';
+        case 'windy': return 'Windy';
         case 'fog': return 'Fog';
         case 'cloudy':
             if (skyCover > 85) return 'Overcast';
@@ -1847,11 +1952,41 @@ function renderHourlyForecast() {
                     }
                 }
 
+                // Get wind speed and direction
+                let windSpeed = 0;
+                let windDirection = 'N';
+                if (props.windSpeed?.values) {
+                    for (const wItem of props.windSpeed.values) {
+                        const [wStartStr, wDuration] = wItem.validTime.split('/');
+                        const wStart = new Date(wStartStr);
+                        const wHours = parseInt(wDuration.match(/PT(\d+)H/)?.[1] || '1');
+                        const wEnd = new Date(wStart.getTime() + wHours * 60 * 60 * 1000);
+                        if (hourTime >= wStart && hourTime < wEnd) {
+                            windSpeed = parseWindSpeed(wItem.value);
+                            break;
+                        }
+                    }
+                }
+                if (props.windDirection?.values) {
+                    for (const dItem of props.windDirection.values) {
+                        const [dStartStr, dDuration] = dItem.validTime.split('/');
+                        const dStart = new Date(dStartStr);
+                        const dHours = parseInt(dDuration.match(/PT(\d+)H/)?.[1] || '1');
+                        const dEnd = new Date(dStart.getTime() + dHours * 60 * 60 * 1000);
+                        if (hourTime >= dStart && hourTime < dEnd) {
+                            windDirection = dItem.value;
+                            break;
+                        }
+                    }
+                }
+
                 hourlyData.push({
                     time: hourTime,
                     temp,
                     feelsLike: feelsLike !== null ? feelsLike : temp,
                     precipProb: precipProb !== null ? precipProb : 0,
+                    windSpeed,
+                    windDirection,
                     icon: getHourlyWeatherIcon(hourTime, props),
                     condition: getConditionText(hourTime, props),
                     category: getConditionCategory(hourTime, props),
@@ -1944,6 +2079,11 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
             minVal = 0;
             maxVal = 100;
             break;
+        case 'wind':
+            values = hourlyData.map(h => h.windSpeed || 0);
+            minVal = 0;
+            maxVal = Math.max(40, Math.max(...values) + 5); // Scale to at least 40 mph
+            break;
         case 'temp':
         default:
             values = hourlyData.map(h => h.temp);
@@ -1951,7 +2091,7 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
     }
 
     // For temp/feels, use actual range with some padding
-    if (hourlyViewMode !== 'precip') {
+    if (hourlyViewMode !== 'precip' && hourlyViewMode !== 'wind') {
         const actualMin = Math.min(...values);
         const actualMax = Math.max(...values);
         const range = actualMax - actualMin;
@@ -1982,6 +2122,14 @@ function renderHourlyTimeline(container, hourlyData, conditionSpans) {
                 else if (hour.precipProb >= 40) pillClass = 'precip-medium';
                 else if (hour.precipProb > 0) pillClass = 'precip-low';
                 else pillClass = 'precip-none';
+                break;
+            case 'wind':
+                currentVal = hour.windSpeed || 0;
+                displayValue = `${getWindArrowSvg(hour.windDirection)} ${currentVal}`;
+                if (currentVal >= 25) pillClass = 'wind-high';
+                else if (currentVal >= 15) pillClass = 'wind-medium';
+                else if (currentVal > 0) pillClass = 'wind-low';
+                else pillClass = 'wind-calm';
                 break;
             case 'temp':
             default:
@@ -2157,6 +2305,43 @@ function getDayPrecipAmount(dayStartStr) {
 }
 
 /**
+ * Check if a day is majority windy (more than half of daylight hours have wind >= 15 mph)
+ * @param {string} dayDateStr - ISO date string for the day
+ * @returns {boolean} True if majority of daylight hours are windy
+ */
+function isDayMajorityWindy(dayDateStr) {
+    const data = window.weatherData;
+    if (!data?.gridpoint?.properties?.windSpeed?.values) return false;
+
+    const windSpeeds = data.gridpoint.properties.windSpeed.values;
+    const dayDate = new Date(dayDateStr);
+    const dayStart = new Date(dayDate);
+    dayStart.setHours(6, 0, 0, 0); // Start at 6 AM
+    const dayEnd = new Date(dayDate);
+    dayEnd.setHours(20, 0, 0, 0); // End at 8 PM (14 daylight hours)
+
+    let windyHours = 0;
+    let totalHours = 0;
+
+    for (const item of windSpeeds) {
+        const [startStr, durationStr] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(durationStr?.match(/PT(\d+)H/)?.[1] || '1');
+
+        for (let h = 0; h < hours; h++) {
+            const hourTime = new Date(start.getTime() + h * 60 * 60 * 1000);
+            if (hourTime >= dayStart && hourTime < dayEnd) {
+                totalHours++;
+                const windMph = parseWindSpeed(item.value);
+                if (windMph >= 15) windyHours++;
+            }
+        }
+    }
+
+    return totalHours > 0 && windyHours > totalHours / 2;
+}
+
+/**
  * Render 7-day forecast
  */
 function render7DayForecast() {
@@ -2177,13 +2362,15 @@ function render7DayForecast() {
             const precipChance = period.probabilityOfPrecipitation?.value || 0;
             const precipAmount = getDayPrecipAmount(period.startTime);
             const precipType = getPrecipType(period.shortForecast);
+            // Check if day is majority windy (only if no significant precip)
+            const majorityWindy = precipChance < 30 && isDayMajorityWindy(period.startTime);
             days.push({
                 name: period.name,
                 date: period.startTime,
                 high: period.temperature,
                 low: nightPeriod?.temperature ?? '--',
                 conditions: period.shortForecast,
-                icon: getWeatherIcon(period.shortForecast, true),
+                icon: majorityWindy ? WIND_ICON_SVG : getWeatherIcon(period.shortForecast, true),
                 detailedForecast: period.detailedForecast,
                 precipChance: precipChance,
                 precipAmount: precipAmount,
@@ -2264,6 +2451,7 @@ function render7DayForecast() {
                     <button type="button" class="hourly-toggle active" data-view="temp" data-day="${index}" role="tab" aria-selected="true">TEMP</button>
                     <button type="button" class="hourly-toggle" data-view="feels" data-day="${index}" role="tab" aria-selected="false">FEELS</button>
                     <button type="button" class="hourly-toggle" data-view="precip" data-day="${index}" role="tab" aria-selected="false">PRECIP</button>
+                    <button type="button" class="hourly-toggle" data-view="wind" data-day="${index}" role="tab" aria-selected="false">WIND</button>
                 </div>
                 <div class="daily-chart-rain-total" id="daily-rain-${index}"></div>
             </div>
@@ -2351,6 +2539,8 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
     const temps = props.temperature.values;
     const appTemps = props.apparentTemperature?.values || [];
     const precipProbs = props.probabilityOfPrecipitation?.values || [];
+    const windSpeeds = props.windSpeed?.values || [];
+    const windDirections = props.windDirection?.values || [];
     const weather = props.weather?.values || [];
 
     // Check if temperatures are in Celsius (NWS returns C)
@@ -2418,11 +2608,37 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
                     }
                 }
 
+                // Find corresponding wind speed and direction
+                let windSpeed = 0;
+                let windDirection = 'N';
+                for (const ws of windSpeeds) {
+                    const [wsStartStr, wsDuration] = ws.validTime.split('/');
+                    const wsStart = new Date(wsStartStr);
+                    const wsHours = parseInt(wsDuration?.match(/PT(\d+)H/)?.[1] || '1');
+                    const wsEnd = new Date(wsStart.getTime() + wsHours * 60 * 60 * 1000);
+                    if (hourTime >= wsStart && hourTime < wsEnd) {
+                        windSpeed = parseWindSpeed(ws.value);
+                        break;
+                    }
+                }
+                for (const wd of windDirections) {
+                    const [wdStartStr, wdDuration] = wd.validTime.split('/');
+                    const wdStart = new Date(wdStartStr);
+                    const wdHours = parseInt(wdDuration?.match(/PT(\d+)H/)?.[1] || '1');
+                    const wdEnd = new Date(wdStart.getTime() + wdHours * 60 * 60 * 1000);
+                    if (hourTime >= wdStart && hourTime < wdEnd) {
+                        windDirection = wd.value;
+                        break;
+                    }
+                }
+
                 hourlyData.push({
                     time: hourTime,
                     temp,
                     feelsLike: feelsLike !== null ? feelsLike : temp,
                     precipProb,
+                    windSpeed,
+                    windDirection,
                     icon: getHourlyWeatherIcon(hourTime, props),
                     condition: getConditionText(hourTime, props),
                     category: getConditionCategory(hourTime, props),
@@ -2462,7 +2678,7 @@ function renderDayHourlyChart(dayIndex, dayDateStr) {
  * @param {HTMLElement} container - Container element
  * @param {Array} hourlyData - Hourly data array for the day
  * @param {Array} conditionSpans - Condition span types
- * @param {string} viewMode - Current view mode (temp, feels, precip)
+ * @param {string} viewMode - Current view mode (temp, feels, precip, wind)
  */
 function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode) {
     // Calculate min/max for pill sizing based on view mode
@@ -2477,6 +2693,11 @@ function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode)
             minVal = 0;
             maxVal = 100;
             break;
+        case 'wind':
+            values = hourlyData.map(h => h.windSpeed || 0);
+            minVal = 0;
+            maxVal = Math.max(40, Math.max(...values) + 5);
+            break;
         case 'temp':
         default:
             values = hourlyData.map(h => h.temp);
@@ -2484,7 +2705,7 @@ function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode)
     }
 
     // For temp/feels, use actual range with some padding
-    if (viewMode !== 'precip') {
+    if (viewMode !== 'precip' && viewMode !== 'wind') {
         const actualMin = Math.min(...values);
         const actualMax = Math.max(...values);
         const range = actualMax - actualMin;
@@ -2514,6 +2735,14 @@ function renderDayChartTimeline(container, hourlyData, conditionSpans, viewMode)
                 else if (hour.precipProb >= 40) pillClass = 'precip-medium';
                 else if (hour.precipProb > 0) pillClass = 'precip-low';
                 else pillClass = 'precip-none';
+                break;
+            case 'wind':
+                currentVal = hour.windSpeed || 0;
+                displayValue = `${getWindArrowSvg(hour.windDirection)} ${currentVal}`;
+                if (currentVal >= 25) pillClass = 'wind-high';
+                else if (currentVal >= 15) pillClass = 'wind-medium';
+                else if (currentVal > 0) pillClass = 'wind-low';
+                else pillClass = 'wind-calm';
                 break;
             case 'temp':
             default:
