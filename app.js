@@ -3719,6 +3719,8 @@ function initializeFullscreenRadarMap() {
 
 /**
  * Create radar layers for fullscreen map
+ * NOTE: Layers are created but NOT added to map to save memory on iOS.
+ * Only the active layer is added when shown.
  */
 function createFullscreenRadarLayers() {
     // Clear existing layers
@@ -3729,10 +3731,10 @@ function createFullscreenRadarLayers() {
     });
     fullscreenRadarLayers = [];
 
-    // Create a layer for each frame with optimized settings for mobile
+    // Create a layer for each frame (but don't add to map yet - saves memory on iOS)
     radarFrames.forEach((frame) => {
         const layer = L.tileLayer(RAINVIEWER_TILE_URL.replace('{path}', frame.path), {
-            opacity: 0,
+            opacity: 0.6,
             attribution: 'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>',
             maxZoom: 18,
             maxNativeZoom: 8,          // RainViewer tiles only exist up to zoom 8, upscale beyond
@@ -3744,10 +3746,7 @@ function createFullscreenRadarLayers() {
         fullscreenRadarLayers.push(layer);
     });
 
-    // Preload all frames for smooth animation
-    fullscreenRadarLayers.forEach(layer => {
-        layer.addTo(fullscreenRadarMap);
-    });
+    // Don't preload - only add layers when needed to prevent iOS memory crash
 }
 
 /**
@@ -3759,19 +3758,20 @@ function showFullscreenRadarFrame(index) {
 
     // Clamp index
     index = Math.max(0, Math.min(index, fullscreenRadarLayers.length - 1));
+    const previousIndex = currentFrameIndex;
     currentFrameIndex = index;
 
-    // Hide all layers, show selected one
-    fullscreenRadarLayers.forEach((layer, i) => {
-        if (i === index) {
-            if (!fullscreenRadarMap.hasLayer(layer)) {
-                layer.addTo(fullscreenRadarMap);
-            }
-            layer.setOpacity(0.6);
-        } else {
-            layer.setOpacity(0);
+    // Remove previous layer and add new one (only one layer on map at a time to save iOS memory)
+    if (previousIndex !== index && fullscreenRadarLayers[previousIndex]) {
+        if (fullscreenRadarMap.hasLayer(fullscreenRadarLayers[previousIndex])) {
+            fullscreenRadarMap.removeLayer(fullscreenRadarLayers[previousIndex]);
         }
-    });
+    }
+
+    const currentLayer = fullscreenRadarLayers[index];
+    if (currentLayer && !fullscreenRadarMap.hasLayer(currentLayer)) {
+        currentLayer.addTo(fullscreenRadarMap);
+    }
 
     // Update controls
     updateFullscreenRadarControls();
