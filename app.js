@@ -2549,9 +2549,14 @@ function render7DayForecast() {
         const avgTemp = (dayLow + dayHigh) / 2;
         const tempBarClass = getTempBarClass(avgTemp);
 
-        // Format day name: "Today"/"This Afternoon" stays as "Today", others become 3-letter abbreviations
+        // Format day name: Check if this period's date is actually today
+        // NWS may call it by day name (e.g., "Tuesday") in the evening even if it's still today
         let dayName;
-        if (day.name === 'Today' || day.name.startsWith('This')) {
+        const periodDate = new Date(day.date);
+        const today = new Date();
+        const isToday = periodDate.toDateString() === today.toDateString();
+
+        if (isToday || day.name === 'Today' || day.name.startsWith('This')) {
             dayName = 'Today';
         } else {
             dayName = day.name.slice(0, 3);
