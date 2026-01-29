@@ -4027,9 +4027,8 @@ function getWMOWeatherInfo(code, hour) {
 function getValidDateRange() {
     const today = new Date();
 
-    // Max date: 3 days ago (to ensure data availability)
+    // Max date: today (no future dates allowed)
     const maxDate = new Date(today);
-    maxDate.setDate(maxDate.getDate() - 3);
 
     // Min date: January 1, 1940
     const minDate = new Date(1940, 0, 1);
