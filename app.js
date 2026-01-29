@@ -1358,6 +1358,27 @@ function getWeatherIcon(conditions, isDaytime) {
 }
 
 /**
+ * Get weather icon with wind override logic
+ * Wind icon only overrides sunny/cloudy conditions, not precipitation
+ * @param {string} conditions - Weather condition text
+ * @param {boolean} isDaytime - Whether it's daytime
+ * @param {boolean} isWindy - Whether wind threshold is met
+ * @returns {string} Weather icon (emoji or SVG)
+ */
+function getWeatherIconWithWind(conditions, isDaytime, isWindy) {
+    if (isWindy) {
+        const condLower = conditions.toLowerCase();
+        const hasPrecipConditions = condLower.includes('rain') || condLower.includes('shower') ||
+            condLower.includes('snow') || condLower.includes('thunder') || condLower.includes('storm') ||
+            condLower.includes('sleet') || condLower.includes('freezing') || condLower.includes('ice');
+        if (!hasPrecipConditions) {
+            return WIND_ICON_SVG;
+        }
+    }
+    return getWeatherIcon(conditions, isDaytime);
+}
+
+/**
  * Get temperature color class
  * @param {number} temp - Temperature in Fahrenheit
  * @returns {string} CSS class name
@@ -1457,21 +1478,12 @@ function renderCurrentConditions() {
     const windDirection = getCurrentValue(gridpoint?.windDirection);
     const isWindy = windSpeed >= 15;
 
-    // Check if there's precipitation (precip takes priority over wind)
-    const precipProb = getCurrentValue(gridpoint?.probabilityOfPrecipitation);
-    const hasPrecip = precipProb && precipProb > 30;
-
     // Update hero icon
     const heroIcon = document.getElementById('hero-icon');
     if (heroIcon) {
         const hour = new Date().getHours();
         const isDaytime = hour >= 6 && hour < 20;
-        // Show wind icon if windy and no significant precipitation
-        if (isWindy && !hasPrecip) {
-            heroIcon.innerHTML = WIND_ICON_SVG;
-        } else {
-            heroIcon.innerHTML = getWeatherIcon(forecast.shortForecast, isDaytime);
-        }
+        heroIcon.innerHTML = getWeatherIconWithWind(forecast.shortForecast, isDaytime, isWindy);
     }
 
     // Feels like (apparent temperature)
@@ -2499,15 +2511,14 @@ function render7DayForecast() {
             const precipChance = period.probabilityOfPrecipitation?.value || 0;
             const precipAmount = getDayPrecipAmount(period.startTime);
             const precipType = getPrecipType(period.shortForecast);
-            // Check if day is majority windy (only if no significant precip)
-            const majorityWindy = precipChance < 30 && isDayMajorityWindy(period.startTime);
+            const majorityWindy = isDayMajorityWindy(period.startTime);
             days.push({
                 name: period.name,
                 date: period.startTime,
                 high: period.temperature,
                 low: nightPeriod?.temperature ?? '--',
                 conditions: period.shortForecast,
-                icon: majorityWindy ? WIND_ICON_SVG : getWeatherIcon(period.shortForecast, true),
+                icon: getWeatherIconWithWind(period.shortForecast, true, majorityWindy),
                 detailedForecast: period.detailedForecast,
                 precipChance: precipChance,
                 precipAmount: precipAmount,
