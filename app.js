@@ -2454,6 +2454,48 @@ function getDayPrecipAmount(dayStartStr) {
 }
 
 /**
+ * Get the actual min/max temperature for a day from hourly gridpoint data
+ * @param {string} dayStartStr - ISO date string for the day
+ * @returns {{high: number, low: number}} The high and low temps for that day
+ */
+function getDayTempRange(dayStartStr) {
+    const data = window.weatherData;
+    if (!data?.gridpoint?.properties?.temperature?.values) return { high: null, low: null };
+
+    const temps = data.gridpoint.properties.temperature.values;
+    const tempUnit = data.gridpoint.properties.temperature.uom;
+    const isC = tempUnit?.includes('degC') || tempUnit?.includes('celsius');
+
+    const dayStart = new Date(dayStartStr);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayTemps = [];
+
+    for (const item of temps) {
+        const [startStr, durationStr] = item.validTime.split('/');
+        const start = new Date(startStr);
+        const hours = parseInt(durationStr?.match(/PT(\d+)H/)?.[1] || '1');
+        const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+        // Check if this period overlaps with the target day
+        if (end > dayStart && start <= dayEnd) {
+            let temp = item.value;
+            if (isC) temp = temp * 9 / 5 + 32;
+            dayTemps.push(Math.round(temp));
+        }
+    }
+
+    if (dayTemps.length === 0) return { high: null, low: null };
+
+    return {
+        high: Math.max(...dayTemps),
+        low: Math.min(...dayTemps)
+    };
+}
+
+/**
  * Check if a day is majority windy (more than half of daylight hours have wind >= 15 mph)
  * @param {string} dayDateStr - ISO date string for the day
  * @returns {boolean} True if majority of daylight hours are windy
@@ -2507,16 +2549,17 @@ function render7DayForecast() {
     for (let i = 0; i < periods.length; i++) {
         const period = periods[i];
         if (period.isDaytime) {
-            const nightPeriod = periods[i + 1];
             const precipChance = period.probabilityOfPrecipitation?.value || 0;
             const precipAmount = getDayPrecipAmount(period.startTime);
             const precipType = getPrecipType(period.shortForecast);
             const majorityWindy = isDayMajorityWindy(period.startTime);
+            // Get actual high/low from hourly data so it matches the hourly breakdown
+            const tempRange = getDayTempRange(period.startTime);
             days.push({
                 name: period.name,
                 date: period.startTime,
-                high: period.temperature,
-                low: nightPeriod?.temperature ?? '--',
+                high: tempRange.high ?? period.temperature,
+                low: tempRange.low ?? '--',
                 conditions: period.shortForecast,
                 icon: getWeatherIconWithWind(period.shortForecast, true, majorityWindy),
                 detailedForecast: period.detailedForecast,
